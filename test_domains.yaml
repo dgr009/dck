@@ -1,0 +1,42 @@
+default_checks:
+  - whois
+  - ssl
+  - http
+  - dns
+
+domains:
+  - name: example.com
+    tags:
+      - prod
+      - main
+    checks:
+      - whois
+      - ssl
+      - http
+      - dns
+      - security
+      - rbl
+    dkim_selectors:
+      - google
+      - mailgun
+
+  - name: test.com
+    tags:
+      - test
+    checks:
+      - http
+      - dns
+
+  - name: supercycl.io
+    tags:
+      - prod
+    checks:
+      - whois
+      - ssl
+      - http
+      - dns
+      - security
+      - rbl
+    dkim_selectors:
+      - google
+      - mailgun

@@ -1,0 +1,203 @@
+{
+  "_comment_1": "Domain & NetUtils Monitor - Sample Manifest File (JSON)",
+  "_comment_2": "This file demonstrates all available configuration options.",
+  "_comment_3": "Note: JSON does not support comments, so we use _comment keys for documentation.",
+  
+  "_info_default_checks": "These checks will be applied to all domains unless overridden",
+  "_info_check_types": "Available: whois, ssl, http, dns, security, rbl",
+  "default_checks": [
+    "whois",
+    "ssl",
+    "http",
+    "dns",
+    "security",
+    "rbl"
+  ],
+  
+  "_info_domains": "List of domains to monitor with their configurations",
+  "domains": [
+    {
+      "_description": "Production domain with all checks enabled",
+      "name": "example.com",
+      "tags": [
+        "production",
+        "critical",
+        "main-site"
+      ],
+      "dkim_selectors": [
+        "google",
+        "mailgun",
+        "default"
+      ]
+    },
+    {
+      "_description": "Staging domain with limited checks",
+      "name": "staging.example.com",
+      "tags": [
+        "staging",
+        "testing"
+      ],
+      "checks": [
+        "http",
+        "dns",
+        "ssl"
+      ]
+    },
+    {
+      "_description": "Legacy domain with basic monitoring",
+      "name": "old-site.example.com",
+      "tags": [
+        "legacy",
+        "deprecated"
+      ],
+      "checks": [
+        "whois",
+        "http"
+      ]
+    },
+    {
+      "_description": "Mail server domain with email security focus",
+      "name": "mail.example.com",
+      "tags": [
+        "mail-server",
+        "production"
+      ],
+      "checks": [
+        "dns",
+        "security",
+        "rbl"
+      ],
+      "dkim_selectors": [
+        "mail",
+        "smtp",
+        "default"
+      ]
+    },
+    {
+      "_description": "API domain with SSL and HTTP monitoring",
+      "name": "api.example.com",
+      "tags": [
+        "api",
+        "production",
+        "backend"
+      ],
+      "checks": [
+        "ssl",
+        "http",
+        "dns"
+      ]
+    },
+    {
+      "_description": "CDN domain with minimal checks",
+      "name": "cdn.example.com",
+      "tags": [
+        "cdn",
+        "infrastructure"
+      ],
+      "checks": [
+        "http",
+        "dns"
+      ]
+    },
+    {
+      "_description": "Development domain",
+      "name": "dev.example.com",
+      "tags": [
+        "development",
+        "internal"
+      ],
+      "checks": [
+        "http",
+        "dns"
+      ]
+    },
+    {
+      "_description": "Customer-facing ecommerce domain",
+      "name": "shop.example.com",
+      "tags": [
+        "production",
+        "ecommerce",
+        "customer-facing"
+      ],
+      "dkim_selectors": [
+        "sendgrid",
+        "orders",
+        "support"
+      ]
+    },
+    {
+      "_description": "Documentation site",
+      "name": "docs.example.com",
+      "tags": [
+        "documentation",
+        "public"
+      ],
+      "checks": [
+        "ssl",
+        "http",
+        "dns"
+      ]
+    },
+    {
+      "_description": "Blog subdomain with all default checks",
+      "name": "blog.example.com",
+      "tags": [
+        "blog",
+        "content",
+        "production"
+      ],
+      "dkim_selectors": [
+        "newsletter"
+      ]
+    }
+  ],
+  
+  "_usage_examples": {
+    "basic": "domain-monitor -f examples/domains.json",
+    "export_json": "domain-monitor -f examples/domains.json -o report.json",
+    "export_csv": "domain-monitor -f examples/domains.json -o report.csv",
+    "debug": "domain-monitor -f examples/domains.json --log-level DEBUG"
+  },
+  
+  "_status_interpretation": {
+    "colors": {
+      "GREEN": "Everything OK, no action needed",
+      "YELLOW": "Warning, attention recommended",
+      "RED": "Critical, immediate action required"
+    },
+    "whois": {
+      "RED": "Expires within 30 days",
+      "YELLOW": "Expires within 60 days",
+      "GREEN": "Expires in 60+ days"
+    },
+    "ssl": {
+      "RED": "Expired or expires within 7 days",
+      "YELLOW": "Expires within 14 days",
+      "GREEN": "Valid for 14+ days"
+    },
+    "http": {
+      "GREEN": "200 OK response",
+      "YELLOW": "3xx redirect",
+      "RED": "4xx or 5xx error"
+    },
+    "dns": {
+      "YELLOW": "Propagation or cache mismatch",
+      "GREEN": "All records consistent"
+    },
+    "security": {
+      "YELLOW": "Missing or misconfigured records",
+      "GREEN": "All security checks passed"
+    },
+    "rbl": {
+      "RED": "Blacklisted",
+      "GREEN": "Not listed"
+    }
+  },
+  
+  "_field_descriptions": {
+    "name": "Required - The domain name to monitor",
+    "tags": "Optional - List of tags for organization/filtering",
+    "checks": "Optional - Override default_checks for this domain",
+    "dkim_selectors": "Optional - DKIM selectors to check (for security check)"
+  }
+}

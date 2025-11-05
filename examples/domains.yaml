@@ -1,0 +1,220 @@
+# Domain & NetUtils Monitor - Sample Manifest File (YAML)
+#
+# This file demonstrates all available configuration options for the domain monitoring tool.
+# You can use this as a template for your own domain monitoring setup.
+
+# ============================================================================
+# DEFAULT CHECKS
+# ============================================================================
+# These checks will be applied to all domains unless overridden at the domain level.
+# Available check types:
+#   - whois:    Domain registration and expiration information
+#   - ssl:      SSL/TLS certificate validity and expiration
+#   - http:     HTTP/HTTPS status codes and availability
+#   - dns:      DNS records (A, AAAA, MX, NS, TXT) and propagation
+#   - security: SPF, DMARC, DKIM, DNSSEC, and HTTP security headers
+#   - rbl:      Real-time Blackhole List checks for spam listings
+
+default_checks:
+  - whois
+  - ssl
+  - http
+  - dns
+  - security
+  - rbl
+
+# ============================================================================
+# DOMAINS
+# ============================================================================
+# List of domains to monitor. Each domain can have:
+#   - name:            (Required) The domain name to monitor
+#   - tags:            (Optional) List of tags for organization/filtering
+#   - checks:          (Optional) Override default_checks for this domain
+#   - dkim_selectors:  (Optional) DKIM selectors to check (for security check)
+
+domains:
+  # --------------------------------------------------------------------------
+  # Example 1: Production domain with all checks enabled
+  # --------------------------------------------------------------------------
+  - name: example.com
+    tags:
+      - production
+      - critical
+      - main-site
+    # Uses default_checks (all checks enabled)
+    dkim_selectors:
+      - google          # Google Workspace DKIM selector
+      - mailgun         # Mailgun DKIM selector
+      - default         # Default DKIM selector
+
+  # --------------------------------------------------------------------------
+  # Example 2: Staging domain with limited checks
+  # --------------------------------------------------------------------------
+  - name: staging.example.com
+    tags:
+      - staging
+      - testing
+    checks:
+      - http          # Only check HTTP status
+      - dns           # Only check DNS records
+      - ssl           # Only check SSL certificate
+    # No DKIM selectors specified
+
+  # --------------------------------------------------------------------------
+  # Example 3: Legacy domain with basic monitoring
+  # --------------------------------------------------------------------------
+  - name: old-site.example.com
+    tags:
+      - legacy
+      - deprecated
+    checks:
+      - whois         # Monitor expiration
+      - http          # Check if still accessible
+    # Minimal checks for legacy domain
+
+  # --------------------------------------------------------------------------
+  # Example 4: Mail server domain with email security focus
+  # --------------------------------------------------------------------------
+  - name: mail.example.com
+    tags:
+      - mail-server
+      - production
+    checks:
+      - dns           # Check MX records
+      - security      # Check SPF, DMARC, DKIM
+      - rbl           # Check blacklist status
+    dkim_selectors:
+      - mail
+      - smtp
+      - default
+
+  # --------------------------------------------------------------------------
+  # Example 5: API domain with SSL and HTTP monitoring
+  # --------------------------------------------------------------------------
+  - name: api.example.com
+    tags:
+      - api
+      - production
+      - backend
+    checks:
+      - ssl           # Ensure valid certificate
+      - http          # Monitor API availability
+      - dns           # Verify DNS resolution
+    # No email security checks needed for API
+
+  # --------------------------------------------------------------------------
+  # Example 6: CDN domain with minimal checks
+  # --------------------------------------------------------------------------
+  - name: cdn.example.com
+    tags:
+      - cdn
+      - infrastructure
+    checks:
+      - http          # Check CDN availability
+      - dns           # Verify DNS propagation
+    # CDN domains typically don't need WHOIS or email checks
+
+  # --------------------------------------------------------------------------
+  # Example 7: Development domain
+  # --------------------------------------------------------------------------
+  - name: dev.example.com
+    tags:
+      - development
+      - internal
+    checks:
+      - http
+      - dns
+    # Minimal monitoring for dev environment
+
+  # --------------------------------------------------------------------------
+  # Example 8: Customer-facing domain with comprehensive monitoring
+  # --------------------------------------------------------------------------
+  - name: shop.example.com
+    tags:
+      - production
+      - ecommerce
+      - customer-facing
+    # Uses default_checks (all checks)
+    dkim_selectors:
+      - sendgrid      # SendGrid DKIM selector
+      - orders        # Order confirmation emails
+      - support       # Support emails
+
+  # --------------------------------------------------------------------------
+  # Example 9: Documentation site
+  # --------------------------------------------------------------------------
+  - name: docs.example.com
+    tags:
+      - documentation
+      - public
+    checks:
+      - ssl
+      - http
+      - dns
+    # No email or WHOIS checks needed
+
+  # --------------------------------------------------------------------------
+  # Example 10: Subdomain with all default checks
+  # --------------------------------------------------------------------------
+  - name: blog.example.com
+    tags:
+      - blog
+      - content
+      - production
+    # Uses default_checks
+    dkim_selectors:
+      - newsletter    # Newsletter DKIM selector
+
+# ============================================================================
+# USAGE EXAMPLES
+# ============================================================================
+#
+# Run with this manifest file:
+#   domain-monitor -f examples/domains.yaml
+#
+# Export results to JSON:
+#   domain-monitor -f examples/domains.yaml -o report.json
+#
+# Export results to CSV:
+#   domain-monitor -f examples/domains.yaml -o report.csv
+#
+# Enable debug logging:
+#   domain-monitor -f examples/domains.yaml --log-level DEBUG
+#
+# ============================================================================
+# CHECK RESULTS INTERPRETATION
+# ============================================================================
+#
+# Status Colors:
+#   🟢 GREEN:   Everything is OK, no action needed
+#   🟡 YELLOW:  Warning, attention recommended
+#   🔴 RED:     Critical, immediate action required
+#
+# WHOIS Check:
+#   - RED:    Domain expires within 30 days
+#   - YELLOW: Domain expires within 60 days
+#   - GREEN:  Domain expires in 60+ days
+#
+# SSL Check:
+#   - RED:    Certificate expired or expires within 7 days
+#   - YELLOW: Certificate expires within 14 days
+#   - GREEN:  Certificate valid for 14+ days
+#
+# HTTP Check:
+#   - GREEN:  200 OK response
+#   - YELLOW: 3xx redirect
+#   - RED:    4xx or 5xx error
+#
+# DNS Check:
+#   - YELLOW: Propagation mismatch or cache mismatch detected
+#   - GREEN:  All DNS records consistent
+#
+# Security Check:
+#   - YELLOW: Missing or misconfigured SPF/DMARC/DKIM/DNSSEC/Headers
+#   - GREEN:  All security checks passed
+#
+# RBL Check:
+#   - RED:    Domain or mail server IP is blacklisted
+#   - GREEN:  Not listed in any RBL
+#
+# ============================================================================
