@@ -69,7 +69,13 @@ class SSLChecker(BaseChecker):
             logger.debug(f"  Expiration: {cert_info.get('expiration_date', 'Unknown')}")
             
             # Calculate days until expiry
-            expiration_date = cert_info['expiration_date']
+            expiration_date_str = cert_info['expiration_date']
+            # Parse the ISO format string back to datetime
+            if isinstance(expiration_date_str, str):
+                expiration_date = datetime.fromisoformat(expiration_date_str)
+            else:
+                expiration_date = expiration_date_str
+            
             now = datetime.now(timezone.utc)
             days_until_expiry = (expiration_date - now).days
             
@@ -176,19 +182,59 @@ class SSLChecker(BaseChecker):
         Returns:
             Dictionary containing certificate information
         """
+        # Create context that doesn't verify certificates but still gets cert info
         context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
         
         with socket.create_connection((domain, port), timeout=self.timeout) as sock:
+            # First get the certificate in binary form (always works)
             with context.wrap_socket(sock, server_hostname=domain) as ssock:
-                # Get certificate in DER format
                 cert_der = ssock.getpeercert(binary_form=True)
-                # Get certificate as dict
-                cert_dict = ssock.getpeercert()
-                
-                # Store both formats for parsing
-                cert_dict['_der'] = cert_der
-                
-                return cert_dict
+        
+        # Now parse the certificate using OpenSSL to get details
+        if cert_der:
+            x509 = crypto.load_certificate(crypto.FILETYPE_ASN1, cert_der)
+            
+            # Build cert_dict from x509 object - format compatible with _parse_certificate
+            subject_components = []
+            for component in x509.get_subject().get_components():
+                subject_components.append((component[0].decode(), component[1].decode()))
+            
+            issuer_components = []
+            for component in x509.get_issuer().get_components():
+                issuer_components.append((component[0].decode(), component[1].decode()))
+            
+            cert_dict = {
+                '_der': cert_der,
+                'subject': tuple(subject_components),
+                'issuer': tuple(issuer_components),
+                'version': x509.get_version(),
+                'serialNumber': str(x509.get_serial_number()),
+                'notBefore': x509.get_notBefore().decode(),
+                'notAfter': x509.get_notAfter().decode(),
+            }
+            
+            # Extract SANs if available
+            san_ext = None
+            for i in range(x509.get_extension_count()):
+                ext = x509.get_extension(i)
+                if ext.get_short_name() == b'subjectAltName':
+                    san_ext = str(ext)
+                    break
+            
+            if san_ext:
+                # Parse SANs from extension string
+                sans = []
+                for part in san_ext.split(','):
+                    part = part.strip()
+                    if part.startswith('DNS:'):
+                        sans.append(('DNS', part[4:]))
+                cert_dict['subjectAltName'] = tuple(sans)
+            
+            return cert_dict
+        
+        return {}
     
     def _parse_certificate(self, cert_dict: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -212,12 +258,12 @@ class SSLChecker(BaseChecker):
         cert_info = {}
         
         # Extract issuer (Requirements: 4.2)
-        issuer = dict(x[0] for x in cert_dict.get('issuer', []))
-        cert_info['issuer'] = issuer.get('organizationName', issuer.get('commonName', 'Unknown'))
+        issuer = dict(cert_dict.get('issuer', []))
+        cert_info['issuer'] = issuer.get('organizationName', issuer.get('commonName', issuer.get('O', 'Unknown')))
         
         # Extract subject (Requirements: 4.3)
-        subject = dict(x[0] for x in cert_dict.get('subject', []))
-        cert_info['subject'] = subject.get('commonName', 'Unknown')
+        subject = dict(cert_dict.get('subject', []))
+        cert_info['subject'] = subject.get('commonName', subject.get('CN', 'Unknown'))
         
         # Extract SANs (Subject Alternative Names) (Requirements: 4.3)
         sans = []

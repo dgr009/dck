@@ -58,33 +58,28 @@ class DNSChecker(BaseChecker):
             warnings = []
             timing_details = {}
             
-            # Query all DNS record types (Requirements: 6.1-6.6)
+            # Query all DNS record types in parallel (Requirements: 6.1-6.6)
             logger.debug(f"Querying DNS records for {domain}")
             
             record_start = time.time()
-            a_records = await self._query_record(domain, 'A')
-            timing_details['a_query_time'] = time.time() - record_start
-            logger.debug(f"A records for {domain}: {a_records} (took {timing_details['a_query_time']:.3f}s)")
+            # Run all queries in parallel for speed
+            results = await asyncio.gather(
+                self._query_record(domain, 'A'),
+                self._query_record(domain, 'AAAA'),
+                self._query_record(domain, 'MX'),
+                self._query_record(domain, 'NS'),
+                self._query_record(domain, 'TXT'),
+                return_exceptions=True
+            )
             
-            record_start = time.time()
-            aaaa_records = await self._query_record(domain, 'AAAA')
-            timing_details['aaaa_query_time'] = time.time() - record_start
-            logger.debug(f"AAAA records for {domain}: {aaaa_records} (took {timing_details['aaaa_query_time']:.3f}s)")
+            a_records = results[0] if not isinstance(results[0], Exception) else []
+            aaaa_records = results[1] if not isinstance(results[1], Exception) else []
+            mx_records = results[2] if not isinstance(results[2], Exception) else []
+            ns_records = results[3] if not isinstance(results[3], Exception) else []
+            txt_records = results[4] if not isinstance(results[4], Exception) else []
             
-            record_start = time.time()
-            mx_records = await self._query_record(domain, 'MX')
-            timing_details['mx_query_time'] = time.time() - record_start
-            logger.debug(f"MX records for {domain}: {mx_records} (took {timing_details['mx_query_time']:.3f}s)")
-            
-            record_start = time.time()
-            ns_records = await self._query_record(domain, 'NS')
-            timing_details['ns_query_time'] = time.time() - record_start
-            logger.debug(f"NS records for {domain}: {ns_records} (took {timing_details['ns_query_time']:.3f}s)")
-            
-            record_start = time.time()
-            txt_records = await self._query_record(domain, 'TXT')
-            timing_details['txt_query_time'] = time.time() - record_start
-            logger.debug(f"TXT records for {domain}: {txt_records} (took {timing_details['txt_query_time']:.3f}s)")
+            timing_details['all_queries_time'] = time.time() - record_start
+            logger.debug(f"All DNS records queried for {domain} in {timing_details['all_queries_time']:.3f}s")
             
             details['a_records'] = a_records
             details['aaaa_records'] = aaaa_records
@@ -217,8 +212,9 @@ class DNSChecker(BaseChecker):
             List of record values as strings
         """
         resolver = dns.resolver.Resolver()
-        resolver.timeout = self.timeout
-        resolver.lifetime = self.timeout
+        # Use shorter timeout for faster responses
+        resolver.timeout = 2.0
+        resolver.lifetime = 3.0
         
         # Configure specific nameserver if provided
         if nameserver:

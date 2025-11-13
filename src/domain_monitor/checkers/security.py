@@ -116,13 +116,26 @@ class SecurityChecker(BaseChecker):
             details['timing'] = timing_details
             logger.debug(f"Security check completed for {domain} in {total_time:.3f}s")
             
-            # Determine overall status
-            if warnings:
+            # Determine overall status based on critical security items only
+            # Critical: SPF, DMARC (email security)
+            # Non-critical: DNSSEC, Security Headers (nice to have)
+            critical_warnings = []
+            
+            if spf_result['status'] != 'OK':
+                critical_warnings.append(spf_result['message'])
+            if dmarc_result['status'] != 'OK':
+                critical_warnings.append(dmarc_result['message'])
+            
+            if critical_warnings:
                 status = CheckResult.WARNING
-                message = "; ".join(warnings)
+                message = "; ".join(warnings)  # Show all warnings in message
             else:
                 status = CheckResult.OK
-                message = "All security checks passed"
+                if warnings:
+                    # Has non-critical warnings but critical checks passed
+                    message = "Critical security checks passed"
+                else:
+                    message = "All security checks passed"
             
             return self._create_result(
                 domain=domain,
@@ -590,7 +603,14 @@ class SecurityChecker(BaseChecker):
             url = f'https://{domain}'
             timeout = aiohttp.ClientTimeout(total=self.timeout)
             
-            async with aiohttp.ClientSession(timeout=timeout) as session:
+            # Create SSL context that doesn't verify certificates
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            connector = aiohttp.TCPConnector(ssl=ssl_context)
+            async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
                 async with session.get(url, allow_redirects=True) as response:
                     headers = response.headers
                     

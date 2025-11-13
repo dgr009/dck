@@ -87,12 +87,12 @@ class DomainExecutor:
         Requirements: 15.1
         """
         return {
-            'whois': WhoisChecker(),
-            'ssl': SSLChecker(),
-            'http': HTTPChecker(),
-            'dns': DNSChecker(),
-            'security': SecurityChecker(),
-            'rbl': RBLChecker(),
+            'whois': WhoisChecker(timeout=5),
+            'ssl': SSLChecker(timeout=5),
+            'http': HTTPChecker(timeout=5),
+            'dns': DNSChecker(timeout=5),
+            'security': SecurityChecker(timeout=5),
+            'rbl': RBLChecker(timeout=5),
         }
 
     async def execute_all(self) -> List[DomainResult]:
@@ -283,9 +283,12 @@ class DomainExecutor:
     
     def _calculate_overall_status(self, results: Dict[str, CheckResult]) -> str:
         """
-        Calculate overall status as the worst status among all checks.
+        Calculate overall status based on critical checks and overall health.
         
-        Status priority (worst to best): CRITICAL > ERROR > WARNING > OK
+        Critical checks: HTTP, SSL, WHOIS
+        - If any critical check is ERROR/CRITICAL -> Overall is ERROR/CRITICAL
+        - If critical checks are OK/WARNING and no other ERROR/CRITICAL -> Overall is OK
+        - If critical checks are OK but have WARNINGs -> Overall is WARNING
         
         Args:
             results: Dictionary of check results
@@ -298,25 +301,45 @@ class DomainExecutor:
         if not results:
             return CheckResult.OK
         
-        # Define status priority (higher number = worse status)
-        status_priority = {
-            CheckResult.OK: 0,
-            CheckResult.WARNING: 1,
-            CheckResult.ERROR: 2,
-            CheckResult.CRITICAL: 3,
-        }
+        # Define critical checks that must pass
+        critical_checks = ['http', 'ssl', 'whois']
         
-        # Find the worst status
-        worst_status = CheckResult.OK
-        worst_priority = 0
+        # Check critical checks first
+        has_critical_error = False
+        has_critical_warning = False
+        
+        for check_type in critical_checks:
+            if check_type in results:
+                status = results[check_type].status
+                if status in [CheckResult.ERROR, CheckResult.CRITICAL]:
+                    has_critical_error = True
+                elif status == CheckResult.WARNING:
+                    has_critical_warning = True
+        
+        # If critical checks have errors, overall is error
+        if has_critical_error:
+            return CheckResult.ERROR
+        
+        # Check for any CRITICAL status in non-critical checks
+        for check_type, check_result in results.items():
+            if check_result.status == CheckResult.CRITICAL:
+                return CheckResult.CRITICAL
+        
+        # Check for any ERROR status in non-critical checks
+        for check_type, check_result in results.items():
+            if check_result.status == CheckResult.ERROR:
+                return CheckResult.ERROR
+        
+        # If we have warnings (critical or non-critical), return WARNING
+        if has_critical_warning:
+            return CheckResult.WARNING
         
         for check_result in results.values():
-            priority = status_priority.get(check_result.status, 0)
-            if priority > worst_priority:
-                worst_priority = priority
-                worst_status = check_result.status
+            if check_result.status == CheckResult.WARNING:
+                return CheckResult.WARNING
         
-        return worst_status
+        # All checks passed
+        return CheckResult.OK
 
 
 async def safe_check(checker: BaseChecker, domain: str, **kwargs) -> CheckResult:

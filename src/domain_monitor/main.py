@@ -63,10 +63,10 @@ def setup_logging(log_level: str, debug_mode: bool = False) -> None:
     if debug_mode:
         # Debug mode: show all logs to console (Requirements: 1.2)
         console_handler.setLevel(numeric_level)
+        console_handler.setFormatter(formatter)
     else:
-        # Normal mode: only show ERROR and CRITICAL to console (Requirements: 1.1, 1.3, 1.5)
-        console_handler.setLevel(logging.ERROR)
-    console_handler.setFormatter(formatter)
+        # Normal mode: suppress all console logs (Requirements: 1.1, 1.3, 1.5)
+        console_handler.setLevel(logging.CRITICAL + 1)  # Suppress all logs
     
     # Configure root logger
     root_logger = logging.getLogger()

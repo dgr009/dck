@@ -113,7 +113,8 @@ class WhoisChecker(BaseChecker):
                 }
             )
             
-        except whois.parser.PywhoisError as e:
+        except (AttributeError, KeyError) as e:
+            # Handle WHOIS parsing errors
             logger.error(f"WHOIS query failed for {domain}: {str(e)}", exc_info=True)
             return self._create_result(
                 domain=domain,

@@ -49,14 +49,17 @@ class Reporter:
     
     def display_table(self) -> None:
         """
-        Display results as a rich table in the console.
+        Display results as a tree structure in the console.
         
-        Creates a formatted table with columns for domain, tags, and
-        various check results. Applies color coding based on status.
-        Enhanced with better formatting, visual indicators, and status grouping.
+        Creates a formatted tree with domains and their check results.
+        Applies color coding based on status with full message visibility.
+        Enhanced with better formatting and visual indicators.
         
         Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6, 3.1, 3.2, 4.5
         """
+        from rich.tree import Tree
+        from rich.panel import Panel
+        
         # Sort results by status priority (Requirements: 4.5)
         status_priority = {
             CheckResult.CRITICAL: 0,
@@ -70,41 +73,94 @@ class Reporter:
             key=lambda r: status_priority.get(r.overall_status, 4)
         )
         
-        # Create table with columns (Requirements: 16.2)
-        table = Table(
-            title="Domain Monitoring Results",
-            show_header=True,
-            header_style="bold magenta",
-            border_style="cyan"
-        )
+        # Create main tree
+        self.console.print()
+        self.console.print("[bold magenta]Domain Monitoring Results[/bold magenta]")
+        self.console.print()
         
-        table.add_column("Domain", style="cyan", no_wrap=True)
-        table.add_column("Status", style="white", width=10)
-        table.add_column("Tags", style="dim")
-        table.add_column("HTTP Status")
-        table.add_column("SSL Expiry")
-        table.add_column("WHOIS Expiry")
-        table.add_column("Security Issues")
-        table.add_column("RBL Status")
-        table.add_column("Time", style="dim", justify="right", width=8)
-        
-        # Add rows for each domain with visual separators between status groups (Requirements: 4.5)
+        # Group by status
         previous_status = None
         for domain_result in sorted_results:
-            # Add visual separator between status groups (Requirements: 4.5)
+            # Add visual separator between status groups
             if previous_status is not None and previous_status != domain_result.overall_status:
-                # Add a separator row
-                separator_text = Text("─" * 60, style="dim")
-                table.add_row(separator_text, "", "", "", "", "", "", "", "")
+                self.console.print()
             
-            row = self._format_table_row(domain_result)
-            table.add_row(*row)
+            # Create domain tree
+            status_icon = self.formatter._get_status_icon(domain_result.overall_status)
+            status_color = self._get_status_color(domain_result.overall_status)
+            
+            domain_label = f"[{status_color}]{status_icon} {domain_result.domain}[/{status_color}]"
+            if domain_result.tags:
+                domain_label += f" [dim]({', '.join(domain_result.tags)})[/dim]"
+            domain_label += f" [dim]- {domain_result.execution_time:.2f}s[/dim]"
+            
+            tree = Tree(domain_label)
+            
+            # Add check results as branches
+            check_order = ['http', 'ssl', 'whois', 'dns', 'security', 'rbl']
+            for check_type in check_order:
+                check_result = domain_result.results.get(check_type)
+                if check_result:
+                    check_color = self._get_status_color(check_result.status)
+                    check_icon = self.formatter._get_status_icon(check_result.status)
+                    
+                    # Format check name
+                    check_name = check_type.upper()
+                    
+                    # Special handling for security check to show details
+                    if check_type == 'security' and check_result.details:
+                        branch_label = f"[{check_color}]{check_icon} {check_name}:[/{check_color}]"
+                        security_branch = tree.add(branch_label)
+                        
+                        # Add individual security checks
+                        details = check_result.details
+                        
+                        # SPF
+                        if 'spf' in details:
+                            spf = details['spf']
+                            spf_icon = "✓" if spf['status'] == 'OK' else "✗"
+                            spf_color = "green" if spf['status'] == 'OK' else "red"
+                            security_branch.add(f"[{spf_color}]{spf_icon} SPF:[/{spf_color}] {spf['message']}")
+                        
+                        # DMARC
+                        if 'dmarc' in details:
+                            dmarc = details['dmarc']
+                            dmarc_icon = "✓" if dmarc['status'] == 'OK' else "✗"
+                            dmarc_color = "green" if dmarc['status'] == 'OK' else "red"
+                            security_branch.add(f"[{dmarc_color}]{dmarc_icon} DMARC:[/{dmarc_color}] {dmarc['message']}")
+                        
+                        # DKIM
+                        if 'dkim' in details and details['dkim']['status'] != 'SKIPPED':
+                            dkim = details['dkim']
+                            dkim_icon = "✓" if dkim['status'] == 'OK' else "✗"
+                            dkim_color = "green" if dkim['status'] == 'OK' else "red"
+                            security_branch.add(f"[{dkim_color}]{dkim_icon} DKIM:[/{dkim_color}] {dkim['message']}")
+                        
+                        # DNSSEC
+                        if 'dnssec' in details:
+                            dnssec = details['dnssec']
+                            dnssec_icon = "✓" if dnssec['status'] == 'OK' else "✗"
+                            dnssec_color = "green" if dnssec['status'] == 'OK' else "red"
+                            security_branch.add(f"[{dnssec_color}]{dnssec_icon} DNSSEC:[/{dnssec_color}] {dnssec['message']}")
+                        
+                        # Security Headers
+                        if 'security_headers' in details:
+                            headers = details['security_headers']
+                            headers_icon = "✓" if headers['status'] == 'OK' else "✗"
+                            headers_color = "green" if headers['status'] == 'OK' else "yellow" if headers['status'] == 'WARNING' else "red"
+                            security_branch.add(f"[{headers_color}]{headers_icon} Security Headers:[/{headers_color}] {headers['message']}")
+                    else:
+                        # Full message without truncation
+                        message = check_result.message
+                        
+                        branch_label = f"[{check_color}]{check_icon} {check_name}:[/{check_color}] {message}"
+                        tree.add(branch_label)
+            
+            self.console.print(tree)
             previous_status = domain_result.overall_status
         
-        # Display the table
-        self.console.print(table)
-        
         # Display summary
+        self.console.print()
         self._display_summary()
     
     def _format_table_row(self, domain_result: DomainResult) -> List[Text]:

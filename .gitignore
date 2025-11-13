@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 .kiro
 .benchmarks
-
+test_domains.yaml
 # C extensions
 *.so
 
