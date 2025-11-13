@@ -4,17 +4,28 @@ A comprehensive domain and network utilities monitoring agent for DevOps enginee
 
 ## Features
 
-- **WHOIS Monitoring**: Track domain registration status and expiration dates
-- **SSL Certificate Checks**: Verify certificate validity and expiration
-- **HTTP/HTTPS Status**: Monitor website availability and response codes
-- **DNS Record Queries**: Check A, AAAA, MX, NS, and TXT records
-- **DNS Propagation**: Verify DNS changes across multiple public DNS servers
-- **Security Records**: Validate SPF, DMARC, DKIM, and DNSSEC configurations
-- **HTTP Security Headers**: Check for security headers (HSTS, CSP, X-Frame-Options, etc.)
-- **RBL Checks**: Detect if domain or mail server IPs are blacklisted
-- **Parallel Execution**: Fast concurrent checks using async I/O
-- **Rich Output**: Colorful table display with status indicators
-- **Export Options**: Save results to JSON or CSV format
+### Core Monitoring
+- **WHOIS Monitoring**: Track domain registration status and expiration dates with smart alerts
+- **SSL Certificate Checks**: Verify certificate validity, expiration, and chain integrity
+- **HTTP/HTTPS Status**: Monitor website availability, response codes, and redirect chains
+- **DNS Record Queries**: Check A, AAAA, MX, NS, and TXT records with parallel resolution
+- **DNS Propagation**: Verify DNS changes across multiple public DNS servers (Google, Cloudflare, Quad9)
+- **DNS Cache Validation**: Compare local DNS cache with public DNS results
+
+### Security Monitoring
+- **Email Security**: Validate SPF, DMARC, and DKIM configurations
+- **DNSSEC**: Check DNS security extensions status
+- **HTTP Security Headers**: Verify HSTS, CSP, X-Frame-Options, X-Content-Type-Options
+- **RBL Checks**: Detect if domain or mail server IPs are blacklisted (Spamhaus, Barracuda, SpamCop)
+
+### Performance & Usability
+- **Parallel Execution**: Fast concurrent checks using async I/O (5-second timeout per check)
+- **Smart Status Calculation**: Overall status based on critical checks (HTTP, SSL, WHOIS, SPF, DMARC)
+- **Tree-Structured Output**: Clean hierarchical display with full message visibility
+- **Individual Security Breakdown**: Detailed view of each security check (SPF, DMARC, DNSSEC, Headers)
+- **Color-Coded Results**: Green (OK), Yellow (Warning), Red (Error/Critical)
+- **Quiet Mode**: Error logs suppressed by default (use --debug for verbose output)
+- **Export Options**: Save results to JSON or CSV format with full details
 
 ## Installation
 
@@ -102,8 +113,11 @@ Options:
   -o, --output PATH        Output file path (.json or .csv)
   --log-level [DEBUG|INFO|WARNING|ERROR]
                           Logging level (default: INFO)
+  --debug                 Enable debug mode with verbose console output
   --help                  Show this message and exit
 ```
+
+**Note:** By default, error logs are suppressed in console output. Use `--debug` flag to see detailed error messages and execution logs.
 
 ### Manifest File Format
 
@@ -242,49 +256,131 @@ Checks Real-time Blackhole Lists:
 
 ## Output Examples
 
-### Console Table Output
+### Console Tree Output
+
+The tool displays results in a clean tree structure for better visibility:
 
 ```
-┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┓
-┃ Domain          ┃ Tags       ┃ HTTP Status ┃ SSL Expiry  ┃ WHOIS Expiry ┃ Security       ┃ RBL       ┃
-┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━┩
-│ example.com     │ prod, main │ 200 OK      │ 45 days     │ 180 days     │ All OK         │ Clean     │
-│ test.com        │ staging    │ 200 OK      │ 10 days ⚠️  │ 25 days ⚠️   │ Missing DMARC  │ Clean     │
-│ old-site.com    │ legacy     │ 404 ❌      │ Expired ❌  │ 5 days ❌    │ No DNSSEC      │ Listed ❌ │
-└─────────────────┴────────────┴─────────────┴─────────────┴──────────────┴────────────────┴───────────┘
+Domain Monitoring Results
+
+✓ example.com (prod, main) - 1.2s
+├── ✓ HTTP: HTTP 200
+├── ✓ SSL: SSL certificate valid for 45 days
+├── ✓ WHOIS: Domain expires in 180 days
+├── ✓ DNS: All DNS records resolved successfully
+├── ✓ SECURITY:
+│   ├── ✓ SPF: SPF record valid
+│   ├── ✓ DMARC: DMARC record found with policy: quarantine
+│   ├── ✓ DNSSEC: DNSSEC Enabled
+│   └── ✓ Security Headers: All security headers present
+└── ✓ RBL: Not listed in any RBL (3 IP(s) checked)
+
+⚠ test.com (staging) - 1.5s
+├── ✓ HTTP: HTTP 200
+├── ⚠ SSL: SSL certificate valid for 10 days
+├── ⚠ WHOIS: Domain expires in 25 days
+├── ✓ DNS: All DNS records resolved successfully
+├── ⚠ SECURITY:
+│   ├── ✗ SPF: Missing SPF
+│   ├── ✗ DMARC: Missing DMARC
+│   ├── ✗ DNSSEC: DNSSEC Not Enabled
+│   └── ✗ Security Headers: Missing Headers: Content-Security-Policy, X-Frame-Options
+└── ✓ RBL: Not listed in any RBL (2 IP(s) checked)
+
+✗ old-site.com (legacy) - 2.1s
+├── ✗ HTTP: HTTP 404
+├── ✗ SSL: SSL certificate expired 5 days ago
+├── ✗ WHOIS: Domain expires in 5 days (CRITICAL)
+├── ✓ DNS: All DNS records resolved successfully
+├── ⚠ SECURITY:
+│   ├── ✗ SPF: Missing SPF
+│   ├── ✗ DMARC: Missing DMARC
+│   ├── ✗ DNSSEC: DNSSEC Not Enabled
+│   └── ✗ Security Headers: Missing Headers: Strict-Transport-Security, Content-Security-Policy
+└── ✗ RBL: LISTED: 2 listing(s) found
+
+Summary: 3 domain(s) checked
+  ✓ OK: 1
+  ⚠ Warning: 1
+  ✗ Error/Critical: 1
 ```
+
+**Key Features:**
+- ✓/✗ icons for quick status identification
+- Color coding (green=OK, yellow=warning, red=error)
+- Hierarchical tree structure for easy reading
+- Individual security check breakdown (SPF, DMARC, DNSSEC, Headers)
+- Execution time per domain
+- Full messages without truncation
 
 ### JSON Export
 
 ```json
-[
-  {
-    "domain": "example.com",
-    "tags": ["prod", "main"],
-    "results": {
-      "whois": {
-        "status": "OK",
-        "message": "Expires in 180 days",
-        "details": {
-          "registrar": "Example Registrar",
-          "expiration_date": "2026-05-05",
-          "days_until_expiry": 180
-        }
-      },
-      "ssl": {
-        "status": "OK",
-        "message": "Valid for 45 days",
-        "details": {
-          "issuer": "Let's Encrypt",
-          "expiration_date": "2025-12-20",
-          "days_until_expiry": 45
+{
+  "timestamp": "2025-11-13T15:30:00",
+  "total_domains": 3,
+  "domains": [
+    {
+      "domain": "example.com",
+      "tags": ["prod", "main"],
+      "overall_status": "OK",
+      "execution_time": 1.2,
+      "checks": {
+        "whois": {
+          "status": "OK",
+          "message": "Domain expires in 180 days",
+          "details": {
+            "registrar": "Example Registrar",
+            "expiration_date": "2026-05-05T00:00:00",
+            "days_until_expiry": 180
+          },
+          "timestamp": "2025-11-13T15:30:01"
+        },
+        "ssl": {
+          "status": "OK",
+          "message": "SSL certificate valid for 45 days",
+          "details": {
+            "issuer": "Let's Encrypt",
+            "subject": "example.com",
+            "expiration_date": "2025-12-28T23:59:59",
+            "days_until_expiry": 45
+          },
+          "timestamp": "2025-11-13T15:30:01"
+        },
+        "http": {
+          "status": "OK",
+          "message": "HTTP 200",
+          "details": {
+            "status_code": 200,
+            "final_url": "https://example.com"
+          },
+          "timestamp": "2025-11-13T15:30:01"
+        },
+        "security": {
+          "status": "OK",
+          "message": "Critical security checks passed",
+          "details": {
+            "spf": {
+              "status": "OK",
+              "message": "SPF record valid",
+              "record": "v=spf1 include:_spf.google.com ~all"
+            },
+            "dmarc": {
+              "status": "OK",
+              "message": "DMARC record found with policy: quarantine",
+              "policy": "quarantine"
+            },
+            "dnssec": {
+              "status": "OK",
+              "message": "DNSSEC Enabled"
+            }
+          },
+          "timestamp": "2025-11-13T15:30:02"
         }
       }
-    },
-    "overall_status": "OK",
-    "execution_time": 2.3
-  }
-]
+    }
+  ]
+}
 ```
 
 ## Configuration
@@ -312,11 +408,18 @@ Default timeout for all checks: 10 seconds
 
 ## Performance
 
-The tool uses asynchronous I/O for parallel execution:
+The tool uses asynchronous I/O for parallel execution with optimized timeouts:
 
-- **10 domains**: ~30 seconds
-- **50 domains**: ~60 seconds
-- **100 domains**: ~120 seconds
+- **5 domains**: ~1-2 seconds
+- **10 domains**: ~2-5 seconds
+- **50 domains**: ~10-20 seconds
+- **100 domains**: ~30-60 seconds
+
+**Performance Features:**
+- Parallel DNS queries for faster resolution
+- 5-second timeout per check (configurable)
+- Concurrent domain checking (up to 20 domains simultaneously)
+- Optimized DNS resolver with 2-second query timeout
 
 Performance depends on network conditions and domain responsiveness.
 
