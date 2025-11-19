@@ -196,6 +196,37 @@ class TestWhoisDataExtraction:
         
         result = whois_checker._extract_expiration_date(mock_data)
         assert result is None
+    
+    def test_extract_country_string(self, whois_checker):
+        """Test extracting country when it's a string."""
+        mock_data = Mock()
+        mock_data.country = "KR"
+        
+        result = whois_checker._extract_country(mock_data)
+        assert result == "KR"
+    
+    def test_extract_country_list(self, whois_checker):
+        """Test extracting country when it's a list."""
+        mock_data = Mock()
+        mock_data.country = ["KR", "US"]
+        
+        result = whois_checker._extract_country(mock_data)
+        assert result == "KR"
+    
+    def test_extract_country_empty_list(self, whois_checker):
+        """Test extracting country from empty list."""
+        mock_data = Mock()
+        mock_data.country = []
+        
+        result = whois_checker._extract_country(mock_data)
+        assert result is None
+    
+    def test_extract_country_missing(self, whois_checker):
+        """Test extracting country when attribute is missing."""
+        mock_data = Mock(spec=[])
+        
+        result = whois_checker._extract_country(mock_data)
+        assert result is None
 
 
 class TestExpirationCalculation:

@@ -61,9 +61,11 @@ class WhoisChecker(BaseChecker):
             registrar = self._extract_registrar(whois_data)
             status = self._extract_status(whois_data)
             expiration_date = self._extract_expiration_date(whois_data)
+            country = self._extract_country(whois_data)
             
             logger.debug(f"WHOIS data for {domain}:")
             logger.debug(f"  Registrar: {registrar}")
+            logger.debug(f"  Country: {country}")
             logger.debug(f"  Status: {status}")
             logger.debug(f"  Expiration Date: {expiration_date}")
             
@@ -75,6 +77,7 @@ class WhoisChecker(BaseChecker):
                     message="Unable to extract expiration date from WHOIS data",
                     details={
                         "registrar": registrar,
+                        "country": country,
                         "status": status,
                         "query_time": query_time,
                         "total_check_time": time.time() - check_start_time
@@ -103,6 +106,7 @@ class WhoisChecker(BaseChecker):
                 message=message,
                 details={
                     "registrar": registrar,
+                    "country": country,
                     "status": status,
                     "expiration_date": expiration_date.isoformat() if expiration_date else None,
                     "days_until_expiry": days_until_expiry,
@@ -163,6 +167,23 @@ class WhoisChecker(BaseChecker):
             if isinstance(status, list):
                 return ', '.join(status) if status else None
             return status
+        return None
+    
+    def _extract_country(self, whois_data) -> Optional[str]:
+        """
+        Extract country information from WHOIS data.
+        
+        Args:
+            whois_data: WHOIS query result object
+            
+        Returns:
+            Country code or name, or None if not available
+        """
+        if hasattr(whois_data, 'country'):
+            country = whois_data.country
+            if isinstance(country, list):
+                return country[0] if country else None
+            return country
         return None
     
     def _extract_expiration_date(self, whois_data) -> Optional[datetime]:

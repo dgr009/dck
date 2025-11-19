@@ -393,6 +393,11 @@ class Reporter:
                         # Display SSL certificate info table (Requirements: 4.4)
                         ssl_table = self.formatter.format_ssl_info(check_result.details)
                         self.console.print(ssl_table)
+                    
+                    elif check_type == 'whois' and check_result.details:
+                        # Display WHOIS information table
+                        whois_table = self.formatter.format_whois_info(check_result.details)
+                        self.console.print(whois_table)
                 
                 # Add visual separator between domains within group
                 self.console.print()

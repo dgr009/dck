@@ -17,8 +17,10 @@ from domain_monitor.config import (
     get_default_manifest_path,
     load_manifest,
     validate_manifest,
+    load_endpoints_config,
     VALID_CHECK_TYPES,
 )
+from domain_monitor.models import EndpointConfig
 
 
 class TestDomainConfig:
@@ -378,3 +380,463 @@ class TestValidateManifest:
             
             # Should not raise any exception
             validate_manifest(manifest)
+
+
+
+class TestLoadEndpointsConfig:
+    """Tests for load_endpoints_config function."""
+    
+    def test_load_valid_yaml_minimal(self, tmp_path):
+        """Test loading a minimal valid YAML endpoint configuration."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "example.com",
+                    "url": "https://example.com"
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        result = load_endpoints_config(str(config_file))
+        
+        assert len(result) == 1
+        assert isinstance(result[0], EndpointConfig)
+        assert result[0].name == "example.com"
+        assert result[0].url == "https://example.com"
+        assert result[0].method == "GET"  # Default
+        assert result[0].timeout == 5.0  # Default
+        assert result[0].headers is None
+        assert result[0].body is None
+    
+    def test_load_valid_yaml_full(self, tmp_path):
+        """Test loading a full YAML endpoint configuration with all fields."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "api.example.com/users",
+                    "url": "https://api.example.com/users",
+                    "method": "POST",
+                    "headers": {
+                        "Authorization": "Bearer token123",
+                        "Content-Type": "application/json"
+                    },
+                    "body": '{"username": "test"}',
+                    "timeout": 10.0
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        result = load_endpoints_config(str(config_file))
+        
+        assert len(result) == 1
+        endpoint = result[0]
+        assert endpoint.name == "api.example.com/users"
+        assert endpoint.url == "https://api.example.com/users"
+        assert endpoint.method == "POST"
+        assert endpoint.headers == {
+            "Authorization": "Bearer token123",
+            "Content-Type": "application/json"
+        }
+        assert endpoint.body == '{"username": "test"}'
+        assert endpoint.timeout == 10.0
+    
+    def test_load_multiple_endpoints(self, tmp_path):
+        """Test loading multiple endpoints."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "example1.com",
+                    "url": "https://example1.com"
+                },
+                {
+                    "name": "example2.com",
+                    "url": "https://example2.com",
+                    "method": "POST"
+                },
+                {
+                    "name": "example3.com",
+                    "url": "https://example3.com",
+                    "timeout": 3.0
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        result = load_endpoints_config(str(config_file))
+        
+        assert len(result) == 3
+        assert result[0].name == "example1.com"
+        assert result[1].name == "example2.com"
+        assert result[1].method == "POST"
+        assert result[2].timeout == 3.0
+    
+    def test_load_valid_json(self, tmp_path):
+        """Test loading a valid JSON endpoint configuration."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "test.com",
+                    "url": "https://test.com",
+                    "method": "GET"
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.json"
+        with open(config_file, 'w') as f:
+            json.dump(config_data, f)
+        
+        result = load_endpoints_config(str(config_file))
+        
+        assert len(result) == 1
+        assert result[0].name == "test.com"
+    
+    def test_file_not_found(self):
+        """Test error when endpoint configuration file doesn't exist."""
+        with pytest.raises(FileNotFoundError, match="Endpoint configuration file not found"):
+            load_endpoints_config("/nonexistent/endpoints.yaml")
+    
+    def test_invalid_yaml_syntax(self, tmp_path):
+        """Test error with invalid YAML syntax."""
+        config_file = tmp_path / "invalid.yaml"
+        config_file.write_text("invalid: yaml: syntax: [")
+        
+        with pytest.raises(ValueError, match="Invalid YAML syntax"):
+            load_endpoints_config(str(config_file))
+    
+    def test_invalid_json_syntax(self, tmp_path):
+        """Test error with invalid JSON syntax."""
+        config_file = tmp_path / "invalid.json"
+        config_file.write_text('{"invalid": json}')
+        
+        with pytest.raises(ValueError, match="Invalid JSON syntax"):
+            load_endpoints_config(str(config_file))
+    
+    def test_unsupported_file_format(self, tmp_path):
+        """Test error with unsupported file format."""
+        config_file = tmp_path / "endpoints.txt"
+        config_file.write_text("some text")
+        
+        with pytest.raises(ValueError, match="Unsupported file format"):
+            load_endpoints_config(str(config_file))
+    
+    def test_empty_file(self, tmp_path):
+        """Test error with empty configuration file."""
+        config_file = tmp_path / "empty.yaml"
+        config_file.write_text("")
+        
+        with pytest.raises(ValueError, match="Endpoint configuration file is empty"):
+            load_endpoints_config(str(config_file))
+    
+    def test_endpoints_not_list(self, tmp_path):
+        """Test error when endpoints is not a list."""
+        config_data = {
+            "endpoints": "not a list"
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="'endpoints' must be a list"):
+            load_endpoints_config(str(config_file))
+    
+    def test_no_endpoints_defined(self, tmp_path):
+        """Test error when no endpoints are defined."""
+        config_data = {
+            "endpoints": []
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="No endpoints defined"):
+            load_endpoints_config(str(config_file))
+    
+    def test_endpoint_not_dict(self, tmp_path):
+        """Test error when endpoint entry is not a dictionary."""
+        config_data = {
+            "endpoints": ["not a dict"]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="must be an object/dictionary"):
+            load_endpoints_config(str(config_file))
+    
+    def test_missing_name_field(self, tmp_path):
+        """Test error when endpoint is missing required 'name' field."""
+        config_data = {
+            "endpoints": [
+                {
+                    "url": "https://example.com"
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="missing required 'name' field"):
+            load_endpoints_config(str(config_file))
+    
+    def test_missing_url_field(self, tmp_path):
+        """Test error when endpoint is missing required 'url' field."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "example.com"
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="missing required 'url' field"):
+            load_endpoints_config(str(config_file))
+    
+    def test_empty_name(self, tmp_path):
+        """Test error when name is empty string."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "",
+                    "url": "https://example.com"
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="'name' must be a non-empty string"):
+            load_endpoints_config(str(config_file))
+    
+    def test_empty_url(self, tmp_path):
+        """Test error when url is empty string."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "example.com",
+                    "url": ""
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="'url' must be a non-empty string"):
+            load_endpoints_config(str(config_file))
+    
+    def test_invalid_http_method(self, tmp_path):
+        """Test error with invalid HTTP method."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "example.com",
+                    "url": "https://example.com",
+                    "method": "INVALID"
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="Invalid HTTP method"):
+            load_endpoints_config(str(config_file))
+    
+    def test_method_case_insensitive(self, tmp_path):
+        """Test that HTTP method is case-insensitive."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "example.com",
+                    "url": "https://example.com",
+                    "method": "post"
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        result = load_endpoints_config(str(config_file))
+        assert result[0].method == "POST"
+    
+    def test_invalid_timeout_type(self, tmp_path):
+        """Test error when timeout is not a number."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "example.com",
+                    "url": "https://example.com",
+                    "timeout": "not a number"
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="'timeout' must be a number"):
+            load_endpoints_config(str(config_file))
+    
+    def test_negative_timeout(self, tmp_path):
+        """Test error when timeout is negative."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "example.com",
+                    "url": "https://example.com",
+                    "timeout": -1.0
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="'timeout' must be positive"):
+            load_endpoints_config(str(config_file))
+    
+    def test_headers_not_dict(self, tmp_path):
+        """Test error when headers is not a dictionary."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "example.com",
+                    "url": "https://example.com",
+                    "headers": "not a dict"
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="'headers' must be an object/dictionary"):
+            load_endpoints_config(str(config_file))
+    
+    def test_body_not_string(self, tmp_path):
+        """Test error when body is not a string."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "example.com",
+                    "url": "https://example.com",
+                    "body": {"key": "value"}  # Should be string
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="'body' must be a string"):
+            load_endpoints_config(str(config_file))
+    
+    def test_invalid_url_no_scheme(self, tmp_path):
+        """Test error when URL has no scheme."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "example.com",
+                    "url": "example.com"
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="URL must include scheme"):
+            load_endpoints_config(str(config_file))
+    
+    def test_invalid_url_wrong_scheme(self, tmp_path):
+        """Test error when URL has invalid scheme."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "example.com",
+                    "url": "ftp://example.com"
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        with pytest.raises(ValueError, match="URL scheme must be http or https"):
+            load_endpoints_config(str(config_file))
+    
+    def test_all_valid_http_methods(self, tmp_path):
+        """Test that all valid HTTP methods are accepted."""
+        methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+        
+        for method in methods:
+            config_data = {
+                "endpoints": [
+                    {
+                        "name": f"test-{method}",
+                        "url": "https://example.com",
+                        "method": method
+                    }
+                ]
+            }
+            
+            config_file = tmp_path / f"endpoints-{method}.yaml"
+            with open(config_file, 'w') as f:
+                yaml.dump(config_data, f)
+            
+            result = load_endpoints_config(str(config_file))
+            assert result[0].method == method
+    
+    def test_whitespace_trimming(self, tmp_path):
+        """Test that whitespace is trimmed from name, url, and method."""
+        config_data = {
+            "endpoints": [
+                {
+                    "name": "  example.com  ",
+                    "url": "  https://example.com  ",
+                    "method": "  GET  "
+                }
+            ]
+        }
+        
+        config_file = tmp_path / "endpoints.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f)
+        
+        result = load_endpoints_config(str(config_file))
+        assert result[0].name == "example.com"
+        assert result[0].url == "https://example.com"
+        assert result[0].method == "GET"

@@ -4,9 +4,11 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 import yaml
+
+from domain_monitor.models import EndpointConfig
 
 
 @dataclass
@@ -175,3 +177,154 @@ def validate_manifest(manifest: ManifestConfig) -> None:
                     f"Invalid check type for domain '{domain.name}': '{check_type}'. "
                     f"Valid types are: {', '.join(sorted(VALID_CHECK_TYPES))}"
                 )
+
+
+def load_endpoints_config(file_path: str) -> List[EndpointConfig]:
+    """
+    Load and parse endpoint configuration file (YAML or JSON).
+    
+    Expected YAML format:
+        endpoints:
+          - name: example.com
+            url: https://example.com
+            method: GET  # Optional, defaults to GET
+            headers:  # Optional
+              Authorization: Bearer token
+              Accept: application/json
+            body: '{"key": "value"}'  # Optional
+            timeout: 5.0  # Optional, defaults to 5.0
+    
+    Args:
+        file_path: Path to endpoint configuration file
+        
+    Returns:
+        List of parsed EndpointConfig objects
+        
+    Raises:
+        FileNotFoundError: If file doesn't exist
+        ValueError: If file format is invalid or parsing fails
+    """
+    path = Path(file_path)
+    
+    if not path.exists():
+        raise FileNotFoundError(f"Endpoint configuration file not found: {file_path}")
+    
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Determine file type and parse
+        if path.suffix in ['.yaml', '.yml']:
+            data = yaml.safe_load(content)
+        elif path.suffix == '.json':
+            data = json.loads(content)
+        else:
+            raise ValueError(f"Unsupported file format: {path.suffix}. Use .yaml, .yml, or .json")
+        
+        if data is None:
+            raise ValueError("Endpoint configuration file is empty")
+        
+        # Parse endpoints list
+        endpoints_data = data.get('endpoints', [])
+        if not isinstance(endpoints_data, list):
+            raise ValueError("'endpoints' must be a list")
+        
+        if not endpoints_data:
+            raise ValueError("No endpoints defined in configuration file")
+        
+        endpoints = []
+        for idx, endpoint_data in enumerate(endpoints_data):
+            try:
+                endpoint = _parse_endpoint(endpoint_data, idx)
+                endpoints.append(endpoint)
+            except ValueError as e:
+                raise ValueError(f"Endpoint at index {idx}: {str(e)}")
+        
+        return endpoints
+        
+    except yaml.YAMLError as e:
+        raise ValueError(f"Invalid YAML syntax: {str(e)}")
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON syntax at line {e.lineno}, column {e.colno}: {e.msg}")
+    except Exception as e:
+        if isinstance(e, (FileNotFoundError, ValueError)):
+            raise
+        raise ValueError(f"Failed to parse endpoint configuration file: {str(e)}")
+
+
+def _parse_endpoint(endpoint_data: Any, index: int) -> EndpointConfig:
+    """
+    Parse a single endpoint configuration from dictionary data.
+    
+    Args:
+        endpoint_data: Dictionary containing endpoint configuration
+        index: Index of endpoint in list (for error messages)
+        
+    Returns:
+        Parsed EndpointConfig object
+        
+    Raises:
+        ValueError: If configuration is invalid
+    """
+    if not isinstance(endpoint_data, dict):
+        raise ValueError("must be an object/dictionary")
+    
+    # Extract required fields
+    name = endpoint_data.get('name')
+    if name is None:
+        raise ValueError("missing required 'name' field")
+    
+    if not isinstance(name, str) or not name.strip():
+        raise ValueError("'name' must be a non-empty string")
+    
+    url = endpoint_data.get('url')
+    if url is None:
+        raise ValueError("missing required 'url' field")
+    
+    if not isinstance(url, str) or not url.strip():
+        raise ValueError("'url' must be a non-empty string")
+    
+    # Extract optional fields with defaults
+    method = endpoint_data.get('method', 'GET')
+    if not isinstance(method, str):
+        raise ValueError("'method' must be a string")
+    
+    timeout = endpoint_data.get('timeout', 5.0)
+    if not isinstance(timeout, (int, float)):
+        raise ValueError("'timeout' must be a number")
+    
+    if timeout <= 0:
+        raise ValueError(f"'timeout' must be positive, got {timeout}")
+    
+    # Parse headers (optional)
+    headers = endpoint_data.get('headers')
+    if headers is not None:
+        if not isinstance(headers, dict):
+            raise ValueError("'headers' must be an object/dictionary")
+        
+        # Validate all header keys and values are strings
+        for key, value in headers.items():
+            if not isinstance(key, str):
+                raise ValueError(f"header key must be a string, got {type(key).__name__}")
+            if not isinstance(value, str):
+                raise ValueError(f"header value for '{key}' must be a string, got {type(value).__name__}")
+    
+    # Parse body (optional)
+    body = endpoint_data.get('body')
+    if body is not None:
+        if not isinstance(body, str):
+            raise ValueError("'body' must be a string")
+    
+    # Create EndpointConfig (validation happens in __post_init__)
+    try:
+        return EndpointConfig(
+            name=name.strip(),
+            url=url.strip(),
+            method=method.strip(),
+            headers=headers,
+            body=body,
+            timeout=float(timeout)
+        )
+    except ValueError as e:
+        # Re-raise validation errors from EndpointConfig
+        raise ValueError(str(e))

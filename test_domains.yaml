@@ -3,40 +3,25 @@ default_checks:
   - ssl
   - http
   - dns
+  - security
 
 domains:
-  - name: example.com
+  - name: bitable.im
     tags:
       - prod
-      - main
-    checks:
-      - whois
-      - ssl
-      - http
-      - dns
-      - security
-      - rbl
-    dkim_selectors:
-      - google
-      - mailgun
-
-  - name: test.com
+  
+  - name: taas.im
     tags:
-      - test
-    checks:
-      - http
-      - dns
-
+      - prod
+  
   - name: supercycl.io
     tags:
       - prod
-    checks:
-      - whois
-      - ssl
-      - http
-      - dns
-      - security
-      - rbl
-    dkim_selectors:
-      - google
-      - mailgun
+  
+  - name: acorndrop.io
+    tags:
+      - dev
+  
+  - name: portx.im
+    tags:
+      - prod

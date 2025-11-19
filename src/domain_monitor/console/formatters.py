@@ -653,6 +653,80 @@ class ResultFormatter:
         return table
     
     @staticmethod
+    def format_whois_info(whois_details: Dict[str, Any]) -> Table:
+        """Display WHOIS information in Table format.
+        
+        Creates a formatted table showing WHOIS registration details including
+        registrar, country, status, expiration date, and days until expiry with
+        color-coded countdown.
+        
+        Args:
+            whois_details: Dictionary containing WHOIS details with keys:
+                          - registrar: Domain registrar name
+                          - country: Country code or name
+                          - status: Domain status
+                          - expiration_date: Expiration date (ISO format string)
+                          - days_until_expiry: Days until domain expires
+            
+        Returns:
+            Table: Rich Table containing formatted WHOIS information
+        """
+        table = Table(title="WHOIS Information", show_header=True, header_style="bold cyan")
+        table.add_column("Property", style="cyan", width=20)
+        table.add_column("Value", style="white")
+        
+        if not whois_details:
+            table.add_row("[dim]No WHOIS information[/dim]", "")
+            return table
+        
+        # Registrar (등록 대행사)
+        if 'registrar' in whois_details and whois_details['registrar']:
+            table.add_row("Registrar", whois_details['registrar'])
+        else:
+            table.add_row("Registrar", "[dim]Not available[/dim]")
+        
+        # Country (국가)
+        if 'country' in whois_details and whois_details['country']:
+            table.add_row("Country", whois_details['country'])
+        else:
+            table.add_row("Country", "[dim]Not available[/dim]")
+        
+        # Status
+        if 'status' in whois_details and whois_details['status']:
+            table.add_row("Status", whois_details['status'])
+        
+        # Expiration Date
+        if 'expiration_date' in whois_details:
+            expiration_str = whois_details['expiration_date']
+            # Parse ISO format and display in readable format
+            try:
+                expiration_dt = datetime.fromisoformat(expiration_str.replace('Z', '+00:00'))
+                formatted_date = expiration_dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+                table.add_row("Expires", formatted_date)
+            except (ValueError, AttributeError):
+                table.add_row("Expires", expiration_str)
+        
+        # Days Until Expiry (with color coding)
+        if 'days_until_expiry' in whois_details:
+            days = whois_details['days_until_expiry']
+            
+            # Color code based on days remaining
+            if days < 0:
+                expiry_text = Text(f"{abs(days)} days ago (EXPIRED)", style="bold red")
+            elif days < 30:
+                expiry_text = Text(f"{days} days (CRITICAL)", style="bold red")
+            elif days < 60:
+                expiry_text = Text(f"{days} days (WARNING)", style="yellow")
+            elif days < 90:
+                expiry_text = Text(f"{days} days", style="white")
+            else:
+                expiry_text = Text(f"{days} days", style="green")
+            
+            table.add_row("Days Until Expiry", expiry_text)
+        
+        return table
+    
+    @staticmethod
     def format_performance_table(results: List[DomainResult]) -> Table:
         """Display execution time metrics in Table format.
         

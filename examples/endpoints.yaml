@@ -1,0 +1,210 @@
+# ============================================================================
+# Live Endpoint Monitoring Configuration
+# ============================================================================
+#
+# This file demonstrates various endpoint configuration options for the
+# live monitoring feature. Each endpoint is checked at regular intervals
+# (default: 1 second) and displayed in a live-updating terminal table.
+#
+# Configuration Options:
+# ----------------------
+# name:     (required) Display name/identifier for the endpoint
+#           This will be shown in the monitoring table
+#
+# url:      (required) Full URL including protocol, domain, and path
+#           Examples: https://example.com, https://api.example.com/v1/users
+#
+# method:   (optional) HTTP method to use for the request
+#           Supported: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
+#           Default: GET
+#
+# headers:  (optional) Custom HTTP headers to include in the request
+#           Format: key-value pairs
+#           Note: Sensitive headers (Authorization, API-Key) are masked in logs
+#
+# body:     (optional) Request body to send with the request
+#           Format: JSON string or plain text
+#           Typically used with POST, PUT, PATCH methods
+#
+# timeout:  (optional) Request timeout in seconds
+#           Default: 5.0
+#           The request will fail if it takes longer than this value
+#
+# ============================================================================
+
+endpoints:
+  # --------------------------------------------------------------------------
+  # Example 1: Simple GET Request (Minimal Configuration)
+  # --------------------------------------------------------------------------
+  # This is the simplest configuration - just a name and URL.
+  # Uses default method (GET) and timeout (5.0 seconds).
+  # Perfect for basic website availability checks.
+  
+  - name: example.com
+    url: https://example.com
+
+  # --------------------------------------------------------------------------
+  # Example 2: GET Request with Custom Timeout
+  # --------------------------------------------------------------------------
+  # Demonstrates how to set a custom timeout for faster failure detection.
+  # Useful for endpoints that should respond quickly.
+  
+  - name: google.com
+    url: https://www.google.com
+    method: GET
+    timeout: 3.0  # Fail if response takes longer than 3 seconds
+
+  # --------------------------------------------------------------------------
+  # Example 3: GET Request with Custom Headers
+  # --------------------------------------------------------------------------
+  # Shows how to add authentication and custom headers to requests.
+  # Common for API endpoints that require authentication.
+  # Note: Authorization headers are automatically masked in logs for security.
+  
+  - name: api.example.com/users
+    url: https://api.example.com/users
+    method: GET
+    headers:
+      Authorization: Bearer EXAMPLE_TOKEN_REPLACE_WITH_REAL  # Masked in logs/display
+      Accept: application/json               # Request JSON response
+      User-Agent: DomainMonitor/1.0         # Custom user agent
+
+  # --------------------------------------------------------------------------
+  # Example 4: POST Request with JSON Body
+  # --------------------------------------------------------------------------
+  # Demonstrates POST request with JSON payload.
+  # Useful for testing login endpoints, API submissions, etc.
+  # The body must be a valid JSON string when Content-Type is application/json.
+  
+  - name: api.example.com/login
+    url: https://api.example.com/auth/login
+    method: POST
+    headers:
+      Content-Type: application/json  # Indicates JSON body
+      Accept: application/json         # Expect JSON response
+    body: '{"username": "test", "password": "test123"}'  # JSON string
+
+  # --------------------------------------------------------------------------
+  # Example 5: PUT Request to Update Resource
+  # --------------------------------------------------------------------------
+  # Shows how to configure PUT requests for resource updates.
+  # Includes authentication, JSON body, and extended timeout.
+  # PUT is typically used to update existing resources completely.
+  
+  - name: api.example.com/data
+    url: https://api.example.com/data/123
+    method: PUT
+    headers:
+      Authorization: Bearer EXAMPLE_TOKEN_REPLACE_WITH_REAL
+      Content-Type: application/json
+    body: '{"status": "active", "updated": true}'
+    timeout: 10.0  # Longer timeout for potentially slow update operations
+
+  # --------------------------------------------------------------------------
+  # Example 6: Health Check Endpoint
+  # --------------------------------------------------------------------------
+  # Typical health check configuration with short timeout.
+  # Health checks should respond quickly, so we use a 2-second timeout.
+  
+  - name: service/health
+    url: https://service.example.com/health
+    method: GET
+    timeout: 2.0  # Health checks should be fast
+
+  # --------------------------------------------------------------------------
+  # Example 7: DELETE Request
+  # --------------------------------------------------------------------------
+  # Demonstrates DELETE method for resource deletion endpoints.
+  # Typically requires authentication but no request body.
+  
+  - name: api/delete
+    url: https://api.example.com/resource/456
+    method: DELETE
+    headers:
+      Authorization: Bearer EXAMPLE_TOKEN_REPLACE_WITH_REAL
+
+  # --------------------------------------------------------------------------
+  # Example 8: PATCH Request for Partial Update
+  # --------------------------------------------------------------------------
+  # Shows PATCH method for partial resource updates.
+  # Unlike PUT, PATCH only updates specified fields.
+  
+  - name: api/patch
+    url: https://api.example.com/users/789
+    method: PATCH
+    headers:
+      Content-Type: application/json
+      Authorization: Bearer EXAMPLE_TOKEN_REPLACE_WITH_REAL
+    body: '{"email": "newemail@example.com"}'  # Only update email field
+
+  # --------------------------------------------------------------------------
+  # Example 9: HEAD Request
+  # --------------------------------------------------------------------------
+  # HEAD requests are like GET but only return headers, no body.
+  # Useful for checking if a resource exists without downloading it.
+  # Perfect for monitoring large files or checking CDN availability.
+  
+  - name: cdn/asset
+    url: https://cdn.example.com/assets/image.png
+    method: HEAD
+
+  # --------------------------------------------------------------------------
+  # Example 10: OPTIONS Request for CORS Preflight
+  # --------------------------------------------------------------------------
+  # OPTIONS requests check what methods are allowed on an endpoint.
+  # Often used for CORS preflight checks in web applications.
+  
+  - name: api/options
+    url: https://api.example.com/endpoint
+    method: OPTIONS
+    headers:
+      Origin: https://example.com  # Required for CORS checks
+
+  # --------------------------------------------------------------------------
+  # Example 11: POST with Form Data
+  # --------------------------------------------------------------------------
+  # Shows how to send form-encoded data instead of JSON.
+  # Common for traditional web forms and some APIs.
+  
+  - name: api/form-submit
+    url: https://api.example.com/form
+    method: POST
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: 'field1=value1&field2=value2'
+
+  # --------------------------------------------------------------------------
+  # Example 12: API with Multiple Custom Headers
+  # --------------------------------------------------------------------------
+  # Demonstrates an endpoint with multiple custom headers.
+  # Shows various header types: authentication, content negotiation, caching.
+  
+  - name: api/complex
+    url: https://api.example.com/v2/data
+    method: GET
+    headers:
+      Authorization: Bearer EXAMPLE_TOKEN_REPLACE_WITH_REAL
+      Accept: application/json
+      Accept-Language: en-US
+      Cache-Control: no-cache
+      X-API-Key: EXAMPLE_API_KEY_REPLACE_WITH_REAL  # Also masked in logs
+    timeout: 7.0
+
+# ============================================================================
+# Usage Instructions
+# ============================================================================
+#
+# To use this configuration file with the live monitor:
+#
+#   domain-monitor watch -f examples/endpoints.yaml
+#
+# The monitor will:
+# - Check all endpoints every 1 second (configurable with --interval)
+# - Display results in a live-updating table
+# - Log status changes to logs/live-monitor.log (configurable with --log-file)
+# - Show color-coded status (green=2xx, yellow=3xx/4xx, red=5xx/errors)
+# - Mask sensitive headers (Authorization, API-Key) in display and logs
+#
+# Press CTRL+C to stop monitoring gracefully.
+#
+# ============================================================================

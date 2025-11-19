@@ -3,17 +3,17 @@ requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "domain-netutils-monitor"
+name = "dck"
 version = "0.1.0"
 description = "Comprehensive domain and network utilities monitoring agent for WHOIS, SSL, DNS, HTTP, security records, and RBL checks"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Domain Monitor Team", email = "team@example.com"}
+    {name = "Domain Monitor Team", email = "cruiser594@gmail.com"}
 ]
 maintainers = [
-    {name = "Domain Monitor Team", email = "team@example.com"}
+    {name = "Domain Monitor Team", email = "cruiser594@gmail.com"}
 ]
 keywords = ["domain", "monitoring", "dns", "ssl", "whois", "security", "rbl", "dmarc", "spf", "dkim"]
 classifiers = [

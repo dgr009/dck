@@ -7,7 +7,8 @@ __pycache__/
 test_domains.yaml
 # C extensions
 *.so
-
+.kiro
+.kiro/*
 # Distribution / packaging
 .Python
 build/
@@ -62,6 +63,11 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+
+# Project-specific logs and test files
+logs/
+domain-monitor.log
+test-*.log
 
 # Flask stuff:
 instance/
