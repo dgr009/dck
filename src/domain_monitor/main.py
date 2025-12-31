@@ -26,6 +26,9 @@ from .executor import DomainExecutor
 from .reporter import Reporter
 from .console.output import ConsoleManager
 from .live_monitor import LiveMonitor
+from .checkers.dns_propagation_checker import DNSPropagationChecker
+from .dns_propagation_display import DNSPropagationDisplay
+from .dns_propagation_monitor import DNSPropagationMonitor
 
 
 # Configure module logger
@@ -528,6 +531,207 @@ def watch_command(
             f"Unexpected error: {error_msg}\n"
             f"Check logs for detailed error information."
         )
+
+
+@cli.command(name='dns-propagation')
+@click.argument('domain')
+@click.option(
+    '-t', '--record-type',
+    default='A',
+    help='DNS record type (A, AAAA, CNAME, MX, NS, TXT). Default: A'
+)
+@click.option(
+    '-e', '--expected',
+    help='Expected value to compare against'
+)
+@click.option(
+    '-w', '--watch',
+    is_flag=True,
+    help='Watch mode - monitor until propagation completes'
+)
+@click.option(
+    '-i', '--interval',
+    type=float,
+    default=5.0,
+    help='Check interval in watch mode (seconds). Default: 5.0'
+)
+@click.option(
+    '--record-types',
+    help='Comma-separated list of record types to check (e.g., A,AAAA,MX)'
+)
+def dns_propagation_command(
+    domain: str,
+    record_type: str,
+    expected: Optional[str],
+    watch: bool,
+    interval: float,
+    record_types: Optional[str]
+) -> None:
+    """
+    Check DNS propagation across multiple public DNS servers.
+    
+    Query multiple public DNS servers to verify DNS record propagation status.
+    Compare actual values against expected values and display propagation rate.
+    
+    Examples:
+    
+        # Check A record propagation
+        domain-monitor dns-propagation example.com
+        
+        # Check with expected value
+        domain-monitor dns-propagation example.com --expected 192.0.2.1
+        
+        # Check AAAA record
+        domain-monitor dns-propagation example.com --record-type AAAA
+        
+        # Watch mode - monitor until complete
+        domain-monitor dns-propagation example.com --watch --expected 192.0.2.1
+        
+        # Custom check interval
+        domain-monitor dns-propagation example.com --watch --interval 10.0
+        
+        # Check multiple record types
+        domain-monitor dns-propagation example.com --record-types A,AAAA,MX
+    
+    Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 9.1, 9.3, 9.4, 10.4
+    """
+    # Configure logging (use INFO level for DNS propagation)
+    setup_logging('INFO', debug_mode=False)
+    
+    # Create ConsoleManager instance
+    console_manager = ConsoleManager(debug_mode=False)
+    
+    try:
+        # Validate domain is not empty (Requirements: 9.1)
+        if not domain or not domain.strip():
+            raise click.ClickException("Domain name cannot be empty")
+        
+        domain = domain.strip()
+        
+        # Validate mutual exclusivity of --record-type and --record-types (Requirements: 6.2, 6.5)
+        if record_types and record_type != 'A':
+            raise click.ClickException(
+                "Cannot use both --record-type and --record-types options together. "
+                "Please specify only one."
+            )
+        
+        # Validate interval (Requirements: 7.6)
+        if interval <= 0:
+            raise click.ClickException(
+                f"Invalid interval: {interval}. Interval must be greater than 0."
+            )
+        
+        # Create checker and display instances
+        checker = DNSPropagationChecker()
+        display = DNSPropagationDisplay(console_manager)
+        
+        # Handle multiple record types (Requirements: 6.5, 3.7)
+        if record_types:
+            types_list = [t.strip() for t in record_types.split(',')]
+            
+            # Validate all record types
+            for rt in types_list:
+                rt_upper = rt.upper()
+                if rt_upper not in DNSPropagationChecker.SUPPORTED_RECORD_TYPES:
+                    raise click.ClickException(
+                        f"Invalid record type '{rt}'. "
+                        f"Supported types: {', '.join(sorted(DNSPropagationChecker.SUPPORTED_RECORD_TYPES))}"
+                    )
+            
+            # Display header
+            console_manager.console.print(
+                f"\n[bold cyan]Checking DNS propagation for {domain}[/bold cyan]"
+            )
+            console_manager.console.print(
+                f"[dim]Record types: {', '.join(types_list)}[/dim]\n"
+            )
+            
+            # Query all record types concurrently (Requirements: 3.7)
+            async def check_all_types():
+                tasks = [
+                    checker.check_propagation(domain, rt, expected)
+                    for rt in types_list
+                ]
+                return await asyncio.gather(*tasks)
+            
+            # Run concurrent checks
+            results = asyncio.run(check_all_types())
+            
+            # Display results for each record type
+            for i, result in enumerate(results):
+                console_manager.console.print(
+                    f"\n[bold]Record Type: {result.record_type}[/bold]"
+                )
+                console_manager.console.print("─" * 80)
+                
+                # Display result
+                display.display_result(result, watch_mode=False)
+            
+            logger.info("DNS propagation check completed for all record types")
+            
+        elif watch:
+            # Watch mode (Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6)
+            monitor = DNSPropagationMonitor(
+                checker=checker,
+                display=display,
+                interval=interval
+            )
+            
+            # Run async monitoring
+            asyncio.run(
+                monitor.start(domain, record_type, expected)
+            )
+            
+        else:
+            # Single check mode (Requirements: 6.1, 6.2, 6.3)
+            console_manager.console.print(
+                f"\n[bold cyan]Checking DNS propagation for {domain}[/bold cyan]"
+            )
+            console_manager.console.print(
+                f"[dim]Record type: {record_type}[/dim]\n"
+            )
+            
+            # Run async check
+            result = asyncio.run(
+                checker.check_propagation(domain, record_type, expected)
+            )
+            
+            # Display result
+            display.display_result(result, watch_mode=False)
+            
+            logger.info("DNS propagation check completed")
+    
+    except click.ClickException:
+        # Re-raise click exceptions (they handle their own display)
+        raise
+    
+    except ValueError as e:
+        # Handle validation errors (e.g., invalid record type) (Requirements: 9.3)
+        logger.error(f"Validation error: {str(e)}", exc_info=True)
+        raise click.ClickException(str(e))
+    
+    except Exception as e:
+        # Handle all other errors with user-friendly messages (Requirements: 9.1, 9.4, 9.5)
+        error_msg = str(e) if str(e) else f"{type(e).__name__} occurred"
+        logger.error(f"Unexpected error during DNS propagation check: {error_msg}", exc_info=True)
+        
+        # Use ConsoleManager for error display
+        try:
+            console_manager.print_error(
+                error_msg,
+                details={
+                    'error_type': type(e).__name__,
+                    'log_file': 'domain-monitor.log'
+                },
+                exception=e
+            )
+            console_manager.print_info("Check 'domain-monitor.log' for detailed error information.")
+        except:
+            # Fallback to click if ConsoleManager not available
+            click.echo(f"\n{click.style('✗', fg='red')} {error_msg}", err=True)
+            click.echo(f"\nCheck 'domain-monitor.log' for detailed error information.", err=True)
+        
+        sys.exit(1)
 
 
 def main() -> None:

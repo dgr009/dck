@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dck"
-version = "0.1.0"
+version = "1.0.0"
 description = "Comprehensive domain and network utilities monitoring agent for WHOIS, SSL, DNS, HTTP, security records, and RBL checks"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -49,6 +49,7 @@ dev = [
     "black>=23.0",
     "mypy>=1.0",
     "ruff>=0.1.0",
+    "hypothesis>=6.0",
 ]
 
 [project.scripts]

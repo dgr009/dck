@@ -258,12 +258,24 @@ class SSLChecker(BaseChecker):
         cert_info = {}
         
         # Extract issuer (Requirements: 4.2)
-        issuer = dict(cert_dict.get('issuer', []))
-        cert_info['issuer'] = issuer.get('organizationName', issuer.get('commonName', issuer.get('O', 'Unknown')))
+        # issuer is a tuple of tuples: ((('organizationName', 'Let\'s Encrypt'),),)
+        issuer_tuple = cert_dict.get('issuer', ())
+        issuer_dict = {}
+        for rdn in issuer_tuple:
+            for name_tuple in rdn:
+                if len(name_tuple) == 2:
+                    issuer_dict[name_tuple[0]] = name_tuple[1]
+        cert_info['issuer'] = issuer_dict.get('organizationName', issuer_dict.get('commonName', issuer_dict.get('O', 'Unknown')))
         
         # Extract subject (Requirements: 4.3)
-        subject = dict(cert_dict.get('subject', []))
-        cert_info['subject'] = subject.get('commonName', subject.get('CN', 'Unknown'))
+        # subject is also a tuple of tuples: ((('commonName', 'example.com'),),)
+        subject_tuple = cert_dict.get('subject', ())
+        subject_dict = {}
+        for rdn in subject_tuple:
+            for name_tuple in rdn:
+                if len(name_tuple) == 2:
+                    subject_dict[name_tuple[0]] = name_tuple[1]
+        cert_info['subject'] = subject_dict.get('commonName', subject_dict.get('CN', 'Unknown'))
         
         # Extract SANs (Subject Alternative Names) (Requirements: 4.3)
         sans = []

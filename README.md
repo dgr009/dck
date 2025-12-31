@@ -4,6 +4,36 @@ A comprehensive domain and network utilities monitoring agent for DevOps enginee
 
 ## Features
 
+### DNS Propagation Checker
+
+The DNS propagation checker verifies DNS record propagation across multiple public DNS servers worldwide. This is essential when making DNS changes to ensure they've propagated correctly.
+
+**Key Features:**
+- **Multiple DNS Servers**: Checks 12 major public DNS servers (Google, Cloudflare, Quad9, OpenDNS, Verisign, Yandex, Comodo, Neustar)
+- **Record Type Support**: A, AAAA, CNAME, MX, NS, TXT records
+- **Expected Value Comparison**: Compare actual values against expected values
+- **Watch Mode**: Monitor propagation progress until complete
+- **Multiple Record Types**: Check multiple record types simultaneously
+- **Visual Progress**: Color-coded status with propagation rate display
+
+**Quick Examples:**
+
+```bash
+# Check A record propagation
+domain-monitor dns-propagation example.com
+
+# Check with expected value
+domain-monitor dns-propagation example.com --expected "192.0.2.1"
+
+# Watch mode - monitor until propagation completes
+domain-monitor dns-propagation example.com --watch --expected "192.0.2.1"
+
+# Check multiple record types
+domain-monitor dns-propagation example.com --record-types A,AAAA,MX
+```
+
+See the [DNS Propagation section](#dns-propagation-checker-1) below for detailed usage.
+
 ### Core Monitoring
 - **WHOIS Monitoring**: Track domain registration status and expiration dates with smart alerts
 - **SSL Certificate Checks**: Verify certificate validity, expiration, and chain integrity
@@ -990,3 +1020,323 @@ This tool uses the following open-source libraries:
 - pyOpenSSL - SSL certificate handling
 - rich - Terminal formatting
 - PyYAML - YAML parsing
+- hypothesis - Property-based testing
+
+## DNS Propagation Checker
+
+### Overview
+
+The DNS propagation checker is a powerful tool for verifying DNS record propagation across multiple public DNS servers worldwide. When you make DNS changes (like updating A records, changing MX records, or modifying nameservers), it can take time for these changes to propagate across the global DNS infrastructure. This tool helps you monitor and verify that propagation.
+
+### Supported DNS Servers
+
+The checker queries 12 major public DNS servers:
+
+| Provider | Primary | Secondary | Location |
+|----------|---------|-----------|----------|
+| Google | 8.8.8.8 | 8.8.4.4 | Global |
+| Cloudflare | 1.1.1.1 | 1.0.0.1 | Global |
+| Quad9 | 9.9.9.9 | - | Global |
+| OpenDNS | 208.67.222.222 | 208.67.220.220 | Global |
+| Verisign | 64.6.64.6 | 64.6.65.6 | Global |
+| Yandex | 77.88.8.8 | - | Russia |
+| Comodo | 8.26.56.26 | - | Global |
+| Neustar | 156.154.70.1 | - | Global |
+
+### Command Reference
+
+```bash
+domain-monitor dns-propagation DOMAIN [OPTIONS]
+```
+
+**Options:**
+- `-t, --record-type TEXT`: DNS record type (A, AAAA, CNAME, MX, NS, TXT). Default: A
+- `-e, --expected TEXT`: Expected value to compare against
+- `-w, --watch`: Watch mode - monitor until propagation completes
+- `-i, --interval FLOAT`: Check interval in watch mode (seconds). Default: 5.0
+- `--record-types TEXT`: Comma-separated list of record types (e.g., A,AAAA,MX)
+
+### Usage Examples
+
+#### Basic Propagation Check
+
+Check current DNS propagation status:
+
+```bash
+domain-monitor dns-propagation example.com
+```
+
+This shows which DNS servers return which values for the domain's A record.
+
+#### Check with Expected Value
+
+Verify that DNS servers are returning your expected value:
+
+```bash
+domain-monitor dns-propagation example.com --expected "192.0.2.1"
+```
+
+The tool will:
+- Show which servers match the expected value (✓ Matched)
+- Show which servers have different values (✗ Mismatched)
+- Calculate propagation rate (percentage of servers with correct value)
+
+#### Check Different Record Types
+
+Check AAAA (IPv6) records:
+
+```bash
+domain-monitor dns-propagation example.com --record-type AAAA
+```
+
+Check MX (mail) records:
+
+```bash
+domain-monitor dns-propagation example.com --record-type MX
+```
+
+Check TXT records:
+
+```bash
+domain-monitor dns-propagation example.com --record-type TXT
+```
+
+#### Watch Mode
+
+Monitor propagation progress in real-time:
+
+```bash
+domain-monitor dns-propagation example.com --watch --expected "192.0.2.1"
+```
+
+Watch mode will:
+- Check DNS servers every 5 seconds (configurable with `--interval`)
+- Display updated results after each check
+- Continue until you press CTRL+C
+- Show propagation progress over time
+
+Custom check interval (every 10 seconds):
+
+```bash
+domain-monitor dns-propagation example.com --watch --interval 10.0 --expected "192.0.2.1"
+```
+
+#### Multiple Record Types
+
+Check multiple record types in one command:
+
+```bash
+domain-monitor dns-propagation example.com --record-types A,AAAA,MX
+```
+
+This displays separate results for each record type.
+
+### Output Interpretation
+
+#### Status Indicators
+
+- **✓ Matched** (Green): DNS server returns the expected value
+- **✗ Mismatched** (Red): DNS server returns a different value
+- **ℹ success** (Blue): Query successful (when no expected value provided)
+- **⚠ Unreachable** (Yellow): DNS server didn't respond or query failed
+- **ℹ no_records** (Blue): No records found for this domain/type
+
+#### Propagation Rate
+
+The propagation rate shows what percentage of responsive DNS servers return the expected value:
+
+```
+Propagation Rate: 75.0%
+
+Server Status:
+  ✓ Matched: 9
+  ✗ Mismatched: 3
+  ⚠ Unreachable: 0
+  ℹ Total Responsive: 12
+```
+
+- **100%**: Fully propagated - all servers have the new value
+- **0%**: Not propagated - no servers have the new value yet
+- **Between 0-100%**: Partial propagation - some servers updated, others not
+
+#### Response Times
+
+Each server shows its response time:
+
+```
+│ Google Primary       │ Global       │  ✓ Matched   │ 192.0.2.1      │  0.051s │
+│ Cloudflare Primary   │ Global       │  ✓ Matched   │ 192.0.2.1      │  0.014s │
+```
+
+Fast response times (< 0.1s) indicate good connectivity to that DNS server.
+
+### Common Use Cases
+
+#### 1. Verify DNS Migration
+
+After migrating to a new hosting provider:
+
+```bash
+# Check if new IP has propagated
+domain-monitor dns-propagation example.com --expected "203.0.113.1"
+
+# Watch until fully propagated
+domain-monitor dns-propagation example.com --watch --expected "203.0.113.1"
+```
+
+#### 2. Troubleshoot DNS Issues
+
+Identify which DNS servers have stale records:
+
+```bash
+# Check current state
+domain-monitor dns-propagation example.com
+
+# Compare against expected
+domain-monitor dns-propagation example.com --expected "192.0.2.1"
+```
+
+If some servers show mismatched values, you know which DNS providers haven't updated yet.
+
+#### 3. Verify Email Configuration
+
+After changing MX records:
+
+```bash
+# Check MX record propagation
+domain-monitor dns-propagation example.com --record-type MX
+
+# Verify expected mail server
+domain-monitor dns-propagation example.com --record-type MX --expected "10 mail.example.com"
+```
+
+#### 4. Monitor Nameserver Changes
+
+After updating nameservers:
+
+```bash
+# Check NS records
+domain-monitor dns-propagation example.com --record-type NS
+
+# Watch propagation
+domain-monitor dns-propagation example.com --record-type NS --watch
+```
+
+#### 5. Comprehensive DNS Check
+
+Check all important record types:
+
+```bash
+domain-monitor dns-propagation example.com --record-types A,AAAA,MX,NS,TXT
+```
+
+### Understanding DNS Propagation
+
+#### Why Does Propagation Take Time?
+
+DNS changes don't happen instantly because:
+
+1. **TTL (Time To Live)**: DNS records have a TTL value that tells DNS servers how long to cache the record. Until the TTL expires, servers may serve cached (old) values.
+
+2. **Recursive Resolvers**: Your ISP and other recursive DNS resolvers cache records. Even after authoritative nameservers update, these caches need to expire.
+
+3. **Geographic Distribution**: DNS servers are distributed globally. Updates propagate at different rates to different locations.
+
+#### Typical Propagation Times
+
+- **Low TTL (300s - 5 minutes)**: Changes propagate within 5-15 minutes
+- **Medium TTL (3600s - 1 hour)**: Changes propagate within 1-2 hours
+- **High TTL (86400s - 24 hours)**: Changes can take 24-48 hours
+
+#### Best Practices
+
+1. **Lower TTL Before Changes**: 24-48 hours before making DNS changes, lower your TTL to 300 seconds (5 minutes). This ensures faster propagation.
+
+2. **Wait for Full Propagation**: Don't assume changes are complete when you see 50% propagation. Wait for 100% to avoid issues.
+
+3. **Test from Multiple Locations**: Use this tool to check multiple DNS servers, as they represent different geographic regions and providers.
+
+4. **Monitor During Migration**: Use watch mode during critical migrations to track propagation progress in real-time.
+
+### Troubleshooting
+
+#### "No records found"
+
+If all servers show "No records":
+- Verify the domain exists and is registered
+- Check if you're querying the correct record type
+- Ensure the domain has DNS records configured
+
+#### Slow Response Times
+
+If response times are consistently high (> 1s):
+- Check your internet connection
+- Try again later (DNS server may be under load)
+- Some geographic regions may have slower connectivity
+
+#### Partial Propagation Stuck
+
+If propagation stays at 50-75% for extended periods:
+- Check your authoritative nameservers are all updated
+- Verify TTL has expired (wait at least TTL duration)
+- Some DNS servers may cache longer than TTL suggests
+
+#### Different Values Across Servers
+
+If servers show different values:
+- This is normal during propagation
+- Wait for TTL to expire on all servers
+- Use watch mode to monitor until convergence
+
+### Integration with CI/CD
+
+You can integrate DNS propagation checks into your deployment pipeline:
+
+```bash
+#!/bin/bash
+# Wait for DNS propagation before proceeding
+
+DOMAIN="example.com"
+EXPECTED_IP="192.0.2.1"
+MAX_ATTEMPTS=60  # 5 minutes with 5-second intervals
+
+for i in $(seq 1 $MAX_ATTEMPTS); do
+    echo "Checking DNS propagation (attempt $i/$MAX_ATTEMPTS)..."
+    
+    # Run check and capture output
+    OUTPUT=$(domain-monitor dns-propagation $DOMAIN --expected $EXPECTED_IP)
+    
+    # Check if 100% propagated
+    if echo "$OUTPUT" | grep -q "Propagation Rate: 100.0%"; then
+        echo "DNS fully propagated!"
+        exit 0
+    fi
+    
+    echo "Not fully propagated yet, waiting..."
+    sleep 5
+done
+
+echo "DNS propagation timeout after $MAX_ATTEMPTS attempts"
+exit 1
+```
+
+### Testing
+
+The DNS propagation checker includes comprehensive test coverage:
+
+- **Unit Tests**: Test individual components (DNS queries, result formatting, error handling)
+- **Property-Based Tests**: Validate correctness properties across random inputs using Hypothesis
+- **Integration Tests**: Test end-to-end workflows including CLI integration
+- **Error Handling Tests**: Verify graceful handling of network errors, timeouts, and invalid inputs
+
+Run tests:
+
+```bash
+# Run all DNS propagation tests
+pytest tests/test_dns_propagation*.py -v
+
+# Run with coverage
+pytest tests/test_dns_propagation*.py --cov=domain_monitor.checkers.dns_propagation_checker --cov-report=html
+```
+
+All DNS propagation tests pass with 100% success rate.

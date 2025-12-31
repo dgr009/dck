@@ -78,7 +78,8 @@ class TestSSLChecker:
             result = await ssl_checker.check("example.com")
         
         assert result.status == CheckResult.OK
-        assert result.details["days_until_expiry"] == 30
+        # Allow for timing variations
+        assert 29 <= result.details["days_until_expiry"] <= 30
     
     @pytest.mark.asyncio
     async def test_check_warning_status(self, ssl_checker):
@@ -98,7 +99,8 @@ class TestSSLChecker:
             result = await ssl_checker.check("example.com")
         
         assert result.status == CheckResult.WARNING
-        assert result.details["days_until_expiry"] == 10
+        # Allow for timing variations
+        assert 9 <= result.details["days_until_expiry"] <= 10
     
     @pytest.mark.asyncio
     async def test_check_critical_status_expiring_soon(self, ssl_checker):
@@ -118,7 +120,8 @@ class TestSSLChecker:
             result = await ssl_checker.check("example.com")
         
         assert result.status == CheckResult.CRITICAL
-        assert result.details["days_until_expiry"] == 3
+        # Allow for timing variations
+        assert 2 <= result.details["days_until_expiry"] <= 3
     
     @pytest.mark.asyncio
     async def test_check_critical_status_expired(self, ssl_checker):

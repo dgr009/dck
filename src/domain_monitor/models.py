@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from urllib.parse import urlparse
 import json
 import re
@@ -268,3 +268,65 @@ class StateChange:
             log_entry += " (recovered)"
         
         return log_entry
+
+
+# DNS Propagation Checker Models
+
+@dataclass
+class DNSServerInfo:
+    """Information about a DNS server."""
+    ip: str
+    name: str
+    location: str
+
+
+@dataclass
+class DNSQueryResult:
+    """Result of a DNS query to a single server."""
+    server: DNSServerInfo
+    status: str  # 'matched', 'mismatched', 'unreachable', 'timeout'
+    values: List[str]  # Actual DNS record values
+    response_time: float  # Query response time in seconds
+    error: Optional[str] = None
+
+
+@dataclass
+class PropagationResult:
+    """Result of DNS propagation check across multiple servers."""
+    domain: str
+    record_type: str
+    expected_value: Optional[str]
+    query_results: List[DNSQueryResult]
+    timestamp: datetime
+    
+    @property
+    def matched_count(self) -> int:
+        """Count of servers with matched values."""
+        return sum(1 for r in self.query_results if r.status == 'matched')
+    
+    @property
+    def mismatched_count(self) -> int:
+        """Count of servers with mismatched values."""
+        return sum(1 for r in self.query_results if r.status == 'mismatched')
+    
+    @property
+    def unreachable_count(self) -> int:
+        """Count of unreachable servers."""
+        return sum(1 for r in self.query_results if r.status in ('unreachable', 'timeout'))
+    
+    @property
+    def responsive_count(self) -> int:
+        """Count of responsive servers (matched + mismatched)."""
+        return self.matched_count + self.mismatched_count
+    
+    @property
+    def propagation_rate(self) -> float:
+        """Propagation rate as percentage (0-100)."""
+        if self.responsive_count == 0:
+            return 0.0
+        return (self.matched_count / self.responsive_count) * 100
+    
+    @property
+    def is_complete(self) -> bool:
+        """Check if propagation is complete (100%)."""
+        return self.propagation_rate == 100.0 and self.responsive_count > 0
