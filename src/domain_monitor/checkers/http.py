@@ -84,7 +84,7 @@ class HTTPChecker(BaseChecker):
                         details['redirect_chain'] = redirect_chain
                     
                     # Include response headers in debug mode
-                    details['response_headers'] = dict(response_headers)
+                    details['response_headers'] = dict(response_headers) if response_headers else {}
                     
                     logger.debug(f"HTTP check completed for {domain} in {details['total_check_time']:.3f}s")
                     

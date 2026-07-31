@@ -590,12 +590,12 @@ class TestCLIIntegration:
     def test_cli_with_manifest_file(self, sample_manifest_yaml, monkeypatch):
         """Test CLI execution with manifest file."""
         from click.testing import CliRunner
-        from domain_monitor.main import main
+        from domain_monitor.main import cli
         
         runner = CliRunner()
         
         # Mock the executor to avoid actual network calls
-        async def mock_execute_all(self):
+        async def mock_execute_all(self, **kwargs):
             from domain_monitor.executor import DomainResult
             from datetime import datetime
             return [
@@ -610,20 +610,19 @@ class TestCLIIntegration:
             ]
         
         with patch('domain_monitor.executor.DomainExecutor.execute_all', mock_execute_all):
-            result = runner.invoke(main, ['-f', sample_manifest_yaml])
+            result = runner.invoke(cli, ['check', '-f', sample_manifest_yaml])
         
         assert result.exit_code == 0
     
-    @pytest.mark.skip(reason="Click testing framework compatibility issue with Python 3.13")
     def test_cli_with_output_json(self, sample_manifest_yaml, tmp_path):
         """Test CLI with JSON output export."""
         from click.testing import CliRunner
-        from domain_monitor.main import main
+        from domain_monitor.main import cli
         
         runner = CliRunner()
         output_file = tmp_path / "output.json"
         
-        async def mock_execute_all(self):
+        async def mock_execute_all(self, **kwargs):
             from domain_monitor.executor import DomainResult
             from datetime import datetime
             return [
@@ -638,21 +637,20 @@ class TestCLIIntegration:
             ]
         
         with patch('domain_monitor.executor.DomainExecutor.execute_all', mock_execute_all):
-            result = runner.invoke(main, ['-f', sample_manifest_yaml, '-o', str(output_file)])
+            result = runner.invoke(cli, ['check', '-f', sample_manifest_yaml, '-o', str(output_file)])
         
         assert result.exit_code == 0
         assert output_file.exists()
     
-    @pytest.mark.skip(reason="Click testing framework compatibility issue with Python 3.13")
     def test_cli_with_output_csv(self, sample_manifest_yaml, tmp_path):
         """Test CLI with CSV output export."""
         from click.testing import CliRunner
-        from domain_monitor.main import main
+        from domain_monitor.main import cli
         
         runner = CliRunner()
         output_file = tmp_path / "output.csv"
         
-        async def mock_execute_all(self):
+        async def mock_execute_all(self, **kwargs):
             from domain_monitor.executor import DomainResult
             from datetime import datetime
             return [
@@ -667,7 +665,7 @@ class TestCLIIntegration:
             ]
         
         with patch('domain_monitor.executor.DomainExecutor.execute_all', mock_execute_all):
-            result = runner.invoke(main, ['-f', sample_manifest_yaml, '-o', str(output_file)])
+            result = runner.invoke(cli, ['check', '-f', sample_manifest_yaml, '-o', str(output_file)])
         
         assert result.exit_code == 0
         assert output_file.exists()

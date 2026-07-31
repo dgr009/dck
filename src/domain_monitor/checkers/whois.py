@@ -49,7 +49,7 @@ class WhoisChecker(BaseChecker):
             # Run WHOIS query in thread pool to avoid blocking
             logger.debug(f"Querying WHOIS data for {domain}")
             query_start = time.time()
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             whois_data = await loop.run_in_executor(None, whois.whois, domain)
             query_time = time.time() - query_start
             logger.debug(f"WHOIS query completed for {domain} in {query_time:.3f}s")

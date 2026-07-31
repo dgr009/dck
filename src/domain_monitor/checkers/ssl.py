@@ -201,11 +201,15 @@ class SSLChecker(BaseChecker):
             # Build cert_dict from x509 object - format compatible with _parse_certificate
             subject_components = []
             for component in x509.get_subject().get_components():
-                subject_components.append((component[0].decode(), component[1].decode()))
+                k = component[0].decode('utf-8', errors='replace') if isinstance(component[0], bytes) else str(component[0])
+                v = component[1].decode('utf-8', errors='replace') if isinstance(component[1], bytes) else str(component[1])
+                subject_components.append((k, v))
             
             issuer_components = []
             for component in x509.get_issuer().get_components():
-                issuer_components.append((component[0].decode(), component[1].decode()))
+                k = component[0].decode('utf-8', errors='replace') if isinstance(component[0], bytes) else str(component[0])
+                v = component[1].decode('utf-8', errors='replace') if isinstance(component[1], bytes) else str(component[1])
+                issuer_components.append((k, v))
             
             not_before_bytes = x509.get_notBefore()
             not_after_bytes = x509.get_notAfter()
