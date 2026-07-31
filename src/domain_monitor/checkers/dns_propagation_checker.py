@@ -132,14 +132,13 @@ class DNSPropagationChecker:
         else:
             # Auto-detect majority consensus from successful query results
             from collections import Counter
-            all_value_tuples = [
-                tuple(sorted(r.values))
-                for r in final_results
-                if r.status not in ('unreachable', 'timeout') and r.values
-            ]
-            if all_value_tuples:
-                most_common_tuple, _ = Counter(all_value_tuples).most_common(1)[0]
-                target_expected = list(most_common_tuple)
+            all_values = []
+            for r in final_results:
+                if r.status not in ('unreachable', 'timeout') and r.values:
+                    all_values.extend(r.values)
+            if all_values:
+                most_common_val, _ = Counter(all_values).most_common(1)[0]
+                target_expected = [most_common_val]
             else:
                 target_expected = None
 

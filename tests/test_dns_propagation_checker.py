@@ -262,8 +262,8 @@ class TestParallelQueryExecution:
         fast_servers = [
             ("8.8.8.8", "Google Primary", "Global"),
             ("8.8.4.4", "Google Secondary", "Global"),
-            ("1.1.1.1", "Cloudflare Primary", "Global"),
             ("1.0.0.1", "Cloudflare Secondary", "Global"),
+            ("9.9.9.9", "Quad9", "Global"),
         ]
         
         checker = DNSPropagationChecker(custom_servers=fast_servers)

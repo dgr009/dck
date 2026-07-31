@@ -119,19 +119,18 @@ class SecurityChecker(BaseChecker):
             # Non-critical: DNSSEC, Security Headers (nice to have)
             critical_warnings = []
             
-            if spf_result['status'] != 'OK':
+            if spf_result['status'] in ('WARNING', 'ERROR'):
                 critical_warnings.append(spf_result['message'])
-            if dmarc_result['status'] != 'OK':
+            if dmarc_result['status'] in ('WARNING', 'ERROR'):
                 critical_warnings.append(dmarc_result['message'])
             
             if critical_warnings:
                 status = CheckResult.WARNING
-                message = "; ".join(warnings)  # Show all warnings in message
+                message = "; ".join(critical_warnings)
             else:
                 status = CheckResult.OK
                 if warnings:
-                    # Has non-critical warnings but critical checks passed
-                    message = "Critical security checks passed"
+                    message = "Security checks passed"
                 else:
                     message = "All security checks passed"
             
@@ -184,11 +183,24 @@ class SecurityChecker(BaseChecker):
                     spf_record = record
                     break
             
+            # Fallback to apex domain if subdomain has no SPF record
+            apex_domain = self._get_apex_domain(domain)
+            if not spf_record and domain != apex_domain:
+                apex_txt = await loop.run_in_executor(
+                    None,
+                    self._query_txt_records_sync,
+                    apex_domain
+                )
+                for record in apex_txt:
+                    if record.startswith('v=spf1'):
+                        spf_record = record
+                        break
+            
             if not spf_record:
-                # SPF record not found
+                # SPF record not found - informative note for email security
                 return {
-                    'status': 'WARNING',
-                    'message': 'Missing SPF',
+                    'status': 'INFO',
+                    'message': 'Missing SPF (Email Security)',
                     'record': None,
                     'validation': None
                 }
@@ -219,6 +231,13 @@ class SecurityChecker(BaseChecker):
                 'validation': None
             }
     
+    def _get_apex_domain(self, domain: str) -> str:
+        """Extract the apex / root domain (e.g., member-web.qpyou.cn -> qpyou.cn)."""
+        parts = domain.strip('.').split('.')
+        if len(parts) > 2:
+            return '.'.join(parts[-2:])
+        return domain
+
     def _query_txt_records_sync(self, domain: str) -> List[str]:
         """
         Synchronous helper to query TXT records (runs in thread pool).
@@ -332,11 +351,25 @@ class SecurityChecker(BaseChecker):
                     dmarc_record = record
                     break
             
+            # Fallback to apex domain if subdomain has no DMARC record
+            apex_domain = self._get_apex_domain(domain)
+            if not dmarc_record and domain != apex_domain:
+                apex_dmarc_domain = f'_dmarc.{apex_domain}'
+                apex_txt = await loop.run_in_executor(
+                    None,
+                    self._query_txt_records_sync,
+                    apex_dmarc_domain
+                )
+                for record in apex_txt:
+                    if 'v=DMARC1' in record:
+                        dmarc_record = record
+                        break
+            
             if not dmarc_record:
-                # DMARC record not found
+                # DMARC record not found - informative note for email security
                 return {
-                    'status': 'WARNING',
-                    'message': 'Missing DMARC',
+                    'status': 'INFO',
+                    'message': 'Missing DMARC (Email Security)',
                     'record': None,
                     'policy': None
                 }
