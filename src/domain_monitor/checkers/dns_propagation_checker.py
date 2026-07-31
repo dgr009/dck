@@ -121,12 +121,28 @@ class DNSPropagationChecker:
             else:
                 final_results.append(result)
         
-        # Compare with expected value if provided
+        # Determine target expected value (explicitly provided or majority consensus)
         if expected_value:
+            target_expected: Optional[Union[str, List[str]]] = expected_value
+        else:
+            # Auto-detect majority consensus from successful query results
+            from collections import Counter
+            all_value_tuples = [
+                tuple(sorted(r.values))
+                for r in final_results
+                if r.status not in ('unreachable', 'timeout') and r.values
+            ]
+            if all_value_tuples:
+                most_common_tuple, _ = Counter(all_value_tuples).most_common(1)[0]
+                target_expected = list(most_common_tuple)
+            else:
+                target_expected = None
+
+        # Compare results against target expected value
+        if target_expected:
             for result in final_results:
                 if result.status not in ('unreachable', 'timeout'):
-                    # Check if expected value matches any of the actual values
-                    if self._values_match(expected_value, result.values, record_type):
+                    if self._values_match(target_expected, result.values, record_type):
                         result.status = 'matched'
                     else:
                         result.status = 'mismatched'
