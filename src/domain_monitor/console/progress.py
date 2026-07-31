@@ -38,6 +38,7 @@ class ProgressTracker:
             TaskProgressColumn(),
             TimeRemainingColumn(),
             console=console,
+            transient=True,
         )
 
     def start(self) -> None:
