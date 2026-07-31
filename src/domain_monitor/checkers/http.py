@@ -7,7 +7,7 @@ Checks HTTP/HTTPS accessibility, status codes, and redirect chains.
 import asyncio
 import logging
 import time
-from typing import Any
+from typing import Any, Dict
 
 import aiohttp
 
@@ -72,7 +72,7 @@ class HTTPChecker(BaseChecker):
                         message = f"HTTP {status_code}"
                     
                     # Build details
-                    details = {
+                    details: Dict[str, Any] = {
                         'status_code': status_code,
                         'protocol': protocol,
                         'final_url': redirect_chain[-1] if redirect_chain else url,
@@ -84,7 +84,10 @@ class HTTPChecker(BaseChecker):
                         details['redirect_chain'] = redirect_chain
                     
                     # Include response headers in debug mode
-                    details['response_headers'] = dict(response_headers) if response_headers else {}
+                    if response_headers:
+                        details['response_headers'] = {str(k): str(v) for k, v in response_headers.items()}
+                    else:
+                        details['response_headers'] = {}
                     
                     logger.debug(f"HTTP check completed for {domain} in {details['total_check_time']:.3f}s")
                     

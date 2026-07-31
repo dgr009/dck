@@ -194,39 +194,36 @@ class SSLChecker(BaseChecker):
             with context.wrap_socket(sock, server_hostname=domain) as ssock:
                 cert_der = ssock.getpeercert(binary_form=True)
         
-        # Now parse the certificate using OpenSSL to get details
+        # Now parse the certificate using cryptography x509 to get details
         if cert_der:
-            x509 = crypto.load_certificate(crypto.FILETYPE_ASN1, cert_der)
+            cert_crypto = crypto_x509.load_der_x509_certificate(cert_der)
             
-            # Build cert_dict from x509 object - format compatible with _parse_certificate
-            subject_components = []
-            for component in x509.get_subject().get_components():
-                k = component[0].decode('utf-8', errors='replace') if isinstance(component[0], bytes) else str(component[0])
-                v = component[1].decode('utf-8', errors='replace') if isinstance(component[1], bytes) else str(component[1])
-                subject_components.append((k, v))
+            # Build cert_dict from cryptography x509 object
+            subject_components = [
+                (attr.oid._name or attr.oid.dotted_string, str(attr.value))
+                for attr in cert_crypto.subject
+            ]
+            issuer_components = [
+                (attr.oid._name or attr.oid.dotted_string, str(attr.value))
+                for attr in cert_crypto.issuer
+            ]
             
-            issuer_components = []
-            for component in x509.get_issuer().get_components():
-                k = component[0].decode('utf-8', errors='replace') if isinstance(component[0], bytes) else str(component[0])
-                v = component[1].decode('utf-8', errors='replace') if isinstance(component[1], bytes) else str(component[1])
-                issuer_components.append((k, v))
+            not_before_str = cert_crypto.not_valid_before_utc.strftime('%b %d %H:%M:%S %Y GMT')
+            not_after_str = cert_crypto.not_valid_after_utc.strftime('%b %d %H:%M:%S %Y GMT')
             
-            not_before_bytes = x509.get_notBefore()
-            not_after_bytes = x509.get_notAfter()
             cert_dict = {
                 '_der': cert_der,
                 'subject': tuple(subject_components),
                 'issuer': tuple(issuer_components),
-                'version': x509.get_version(),
-                'serialNumber': str(x509.get_serial_number()),
-                'notBefore': not_before_bytes.decode('ascii') if not_before_bytes else '',
-                'notAfter': not_after_bytes.decode('ascii') if not_after_bytes else '',
+                'version': cert_crypto.version.value,
+                'serialNumber': str(cert_crypto.serial_number),
+                'notBefore': not_before_str,
+                'notAfter': not_after_str,
             }
             
             # Extract SANs if available
             sans = []
             try:
-                cert_crypto = x509.to_cryptography()
                 san_ext = cert_crypto.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
                 if isinstance(san_ext.value, crypto_x509.SubjectAlternativeName):
                     for dns_name in san_ext.value.get_values_for_type(crypto_x509.DNSName):

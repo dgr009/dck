@@ -375,6 +375,7 @@ class TestExportFunctionality:
             'dns_status', 'dns_message'
         ]
         
+        assert headers is not None
         for header in expected_headers:
             assert header in headers
         
