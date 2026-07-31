@@ -24,20 +24,26 @@ class DNSPropagationChecker:
     
     # Public DNS servers with their names and locations
     PUBLIC_DNS_SERVERS = [
+        # Korea (Major Local ISPs)
+        ('168.126.63.1', 'KT Primary', 'Korea'),
+        ('210.220.163.82', 'SK Broadband', 'Korea'),
+        ('164.124.101.2', 'LG U+', 'Korea'),
+        # Global Major
         ('8.8.8.8', 'Google Primary', 'Global'),
         ('8.8.4.4', 'Google Secondary', 'Global'),
         ('1.1.1.1', 'Cloudflare Primary', 'Global'),
         ('1.0.0.1', 'Cloudflare Secondary', 'Global'),
         ('9.9.9.9', 'Quad9', 'Global'),
+        ('208.67.222.222', 'Cisco OpenDNS', 'Global'),
+        # China
         ('119.29.29.29', 'Tencent DNSPod', 'China'),
         ('223.5.5.5', 'AliDNS Primary', 'China'),
-        ('208.67.222.222', 'OpenDNS Primary', 'Global'),
-        ('208.67.220.220', 'OpenDNS Secondary', 'Global'),
-        ('64.6.64.6', 'Verisign', 'Global'),
-        ('64.6.65.6', 'Verisign Secondary', 'Global'),
+        ('180.76.76.76', 'Baidu DNS', 'China'),
+        # Asia-Pacific & Europe & US
+        ('101.101.101.101', 'TWNIC Quad101', 'Taiwan'),
         ('77.88.8.8', 'Yandex', 'Russia'),
-        ('8.26.56.26', 'Comodo Secure DNS', 'Global'),
-        ('156.154.70.1', 'Neustar UltraDNS', 'Global'),
+        ('64.6.64.6', 'Verisign', 'US'),
+        ('156.154.70.1', 'Neustar UltraDNS', 'US'),
     ]
     
     # Supported DNS record types
