@@ -105,7 +105,7 @@ class RBLChecker(BaseChecker):
                 
                 return self._create_result(
                     domain=domain,
-                    status=CheckResult.CRITICAL,
+                    status=CheckResult.WARNING,
                     message=message,
                     details={
                         "ips_checked": list(ips),

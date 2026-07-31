@@ -11,6 +11,7 @@ from .http import HTTPChecker
 from .dns import DNSChecker
 from .security import SecurityChecker
 from .rbl import RBLChecker
+from .cdn import CDNChecker
 from .dns_propagation_checker import DNSPropagationChecker
 
-__all__ = ['BaseChecker', 'CheckResult', 'WhoisChecker', 'SSLChecker', 'HTTPChecker', 'DNSChecker', 'SecurityChecker', 'RBLChecker', 'DNSPropagationChecker']
+__all__ = ['BaseChecker', 'CheckResult', 'WhoisChecker', 'SSLChecker', 'HTTPChecker', 'DNSChecker', 'SecurityChecker', 'RBLChecker', 'CDNChecker', 'DNSPropagationChecker']

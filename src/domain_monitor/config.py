@@ -29,8 +29,11 @@ class ManifestConfig:
     domains: List[DomainConfig]
 
 
+# Core default check types (essential web/domain health)
+DEFAULT_CHECKS = ['http', 'ssl', 'dns', 'whois']
+
 # Valid check types
-VALID_CHECK_TYPES = {'whois', 'ssl', 'http', 'dns', 'security', 'rbl'}
+VALID_CHECK_TYPES = {'whois', 'ssl', 'http', 'dns', 'security', 'rbl', 'cdn'}
 
 
 def get_default_manifest_path() -> Optional[str]:

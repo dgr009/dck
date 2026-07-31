@@ -20,6 +20,7 @@ from .checkers.http import HTTPChecker
 from .checkers.dns import DNSChecker
 from .checkers.security import SecurityChecker
 from .checkers.rbl import RBLChecker
+from .checkers.cdn import CDNChecker
 
 if TYPE_CHECKING:
     from .console.output import ConsoleManager
@@ -89,6 +90,7 @@ class DomainExecutor:
             'dns': DNSChecker(timeout=5),
             'security': SecurityChecker(timeout=5),
             'rbl': RBLChecker(timeout=5),
+            'cdn': CDNChecker(timeout=5),
         }
 
     async def execute_all(self) -> List[DomainResult]:

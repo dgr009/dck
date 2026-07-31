@@ -116,20 +116,22 @@ def resolve_manifest_file(file_path: Optional[str]) -> str:
     return default_path
 
 
-def create_adhoc_manifest(domain: str) -> ManifestConfig:
+def create_adhoc_manifest(domain: str, checks: Optional[str] = None) -> ManifestConfig:
     """
-    Create temporary manifest for ad-hoc domain check.
-    
-    Creates a ManifestConfig with a single domain and all default checks enabled.
+    Create a ManifestConfig for a single domain in ad-hoc mode.
     
     Args:
         domain: Domain name to check
+        checks: Optional comma-separated check types
         
     Returns:
         ManifestConfig with single domain
     """
-    # Apply all default checks
-    default_checks = list(VALID_CHECK_TYPES)
+    if checks:
+        default_checks = [c.strip().lower() for c in checks.split(',') if c.strip()]
+    else:
+        # Core default checks for essential web/domain health
+        default_checks = ['http', 'ssl', 'dns', 'whois']
     
     domain_config = DomainConfig(
         name=domain,
@@ -167,6 +169,11 @@ def cli() -> None:
     help='Single domain to check (ad-hoc mode)'
 )
 @click.option(
+    '-c', '--checks',
+    type=str,
+    help='Comma-separated list of check types to run (default: http,ssl,dns,whois. Options: http,ssl,dns,whois,security,rbl)'
+)
+@click.option(
     '-o', '--output',
     type=click.Path(),
     help='Output file path (.json or .csv)'
@@ -192,6 +199,7 @@ def cli() -> None:
 def check_command(
     file: Optional[str],
     domain: Optional[str],
+    checks: Optional[str],
     output: Optional[str],
     log_level: str,
     debug: bool,
@@ -201,7 +209,7 @@ def check_command(
     Run domain checks and display results.
     
     Monitor multiple domains for WHOIS expiration, SSL certificates, HTTP status,
-    DNS records, security configurations, and RBL listings.
+    and DNS records.
     
     Examples:
     
@@ -211,17 +219,11 @@ def check_command(
         # Specify manifest file
         dck check -f /path/to/domains.yaml
         
-        # Check single domain ad-hoc
+        # Check single domain (default core checks: http, ssl, dns, whois)
         dck check -d example.com
         
-        # Export results to JSON
-        dck check -f domains.yaml -o report.json
-        
-        # Enable debug logging
-        dck check --log-level DEBUG
-        
-        # Enable debug mode with verbose console output
-        dck check --debug
+        # Check specific check types (e.g. add security and rbl)
+        dck check -d example.com -c http,ssl,security
     """
     # Configure logging first
     setup_logging(log_level, debug_mode=debug)
@@ -232,16 +234,13 @@ def check_command(
     try:
         # Validate mutual exclusivity of -f and -d flags
         if file and domain:
-            raise click.ClickException(
-                "Cannot use both -f/--file and -d/--domain options together. "
-                "Please specify only one."
-            )
+            raise click.UsageError("Cannot specify both -f/--file and -d/--domain options")
         
         # Load or create manifest configuration
         if domain:
             # Ad-hoc domain check mode
             logger.info(f"Running ad-hoc check for domain: {domain}")
-            manifest = create_adhoc_manifest(domain)
+            manifest = create_adhoc_manifest(domain, checks=checks)
             manifest_path = f"ad-hoc: {domain}"
         else:
             # Load manifest from file
