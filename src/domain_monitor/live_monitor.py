@@ -4,7 +4,7 @@ import asyncio
 import signal
 import time
 from datetime import datetime
-from typing import List
+from typing import List, Any
 import logging
 import aiohttp
 
@@ -51,7 +51,7 @@ class LiveMonitor:
         signal.signal(signal.SIGINT, self._handle_shutdown)
         signal.signal(signal.SIGTERM, self._handle_shutdown)
     
-    def _handle_shutdown(self, signum, frame) -> None:
+    def _handle_shutdown(self, signum: int, frame: Any) -> None:
         """Handle CTRL+C gracefully.
         
         Args:

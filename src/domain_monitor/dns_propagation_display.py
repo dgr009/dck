@@ -235,7 +235,7 @@ class DNSPropagationDisplay:
         )
         
         with progress:
-            task = progress.add_task("", total=100, completed=rate)
+            task = progress.add_task("", total=100, completed=int(rate))
             # Just display, no actual progress tracking needed
         
         self.console.print()

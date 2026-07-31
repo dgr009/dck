@@ -9,7 +9,7 @@ import csv
 import json
 import logging
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from rich.console import Console
 from rich.table import Table
@@ -32,7 +32,7 @@ class Reporter:
     and export to JSON and CSV formats.
     """
     
-    def __init__(self, results: List[DomainResult], console_manager: ConsoleManager = None):
+    def __init__(self, results: List[DomainResult], console_manager: Optional[ConsoleManager] = None):
         """
         Initialize the reporter with aggregated domain results.
         
@@ -213,7 +213,7 @@ class Reporter:
         
         return row
     
-    def _format_check_result(self, check_result: CheckResult) -> Text:
+    def _format_check_result(self, check_result: Optional[CheckResult]) -> Text:
         """
         Format a single check result with color coding.
         
@@ -328,7 +328,7 @@ class Reporter:
         )
         
         # Group results by status for visual separation
-        grouped_results = {}
+        grouped_results: Dict[str, List[DomainResult]] = {}
         for result in sorted_results:
             status = result.overall_status
             if status not in grouped_results:

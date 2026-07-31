@@ -9,7 +9,7 @@ import asyncio
 import logging
 import re
 import time
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 import dns.resolver
 import aiohttp
@@ -27,7 +27,7 @@ class SecurityChecker(BaseChecker):
     for presence of important HTTP security headers.
     """
     
-    async def check(self, domain: str, **kwargs) -> CheckResult:
+    async def check(self, domain: str, **kwargs: Any) -> CheckResult:
         """
         Execute security check for the specified domain.
         
@@ -615,7 +615,7 @@ class SecurityChecker(BaseChecker):
                     headers = response.headers
                     
                     # Check for each required header
-                    header_results = {}
+                    header_results: Dict[str, Optional[str]] = {}
                     missing_headers = []
                     
                     for header in required_headers:

@@ -5,6 +5,7 @@ from typing import Optional
 
 from rich.console import Console
 from rich.progress import (
+    TaskID,
     Progress,
     SpinnerColumn,
     BarColumn,
@@ -28,7 +29,7 @@ class ProgressTracker:
         self.console = console
         self.total_domains = total_domains
         self.start_time: Optional[float] = None
-        self.task_id: Optional[int] = None
+        self.task_id: Optional[TaskID] = None
         
         self.progress = Progress(
             SpinnerColumn(),

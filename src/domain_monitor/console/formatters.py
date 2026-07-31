@@ -419,7 +419,7 @@ class ResultFormatter:
             return table
         
         # Create a map of IP to RBL servers where it's listed
-        ip_to_rbls = {}
+        ip_to_rbls: Dict[str, List[str]] = {}
         for listing in listings:
             ip = listing.get('ip')
             rbl_server = listing.get('rbl_server')

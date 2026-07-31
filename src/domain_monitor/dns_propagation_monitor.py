@@ -9,7 +9,7 @@ import asyncio
 import signal
 import time
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Union, Any
 import logging
 
 from .checkers.dns_propagation_checker import DNSPropagationChecker
@@ -65,7 +65,7 @@ class DNSPropagationMonitor:
         signal.signal(signal.SIGINT, self._handle_shutdown)
         signal.signal(signal.SIGTERM, self._handle_shutdown)
     
-    def _handle_shutdown(self, signum, frame) -> None:
+    def _handle_shutdown(self, signum: int, frame: Any) -> None:
         """Handle CTRL+C gracefully.
         
         Sets shutdown flag to stop monitoring loop and display final results.
@@ -86,7 +86,7 @@ class DNSPropagationMonitor:
         self,
         domain: str,
         record_type: str,
-        expected_value: Optional[str] = None
+        expected_value: Optional[Union[str, List[str]]] = None
     ) -> None:
         """Start monitoring DNS propagation.
         
@@ -133,7 +133,7 @@ class DNSPropagationMonitor:
         self,
         domain: str,
         record_type: str,
-        expected_value: Optional[str]
+        expected_value: Optional[Union[str, List[str]]]
     ) -> None:
         """Main monitoring loop that runs every interval.
         
@@ -145,18 +145,19 @@ class DNSPropagationMonitor:
             domain: Domain name to monitor
             record_type: DNS record type
             expected_value: Optional expected value for comparison
-            
-        Requirements: 7.1, 7.2, 7.3, 8.5
         """
-        iteration = 0
         last_result: Optional[PropagationResult] = None
+        iteration = 0
+        
+        # Register signal handlers for graceful shutdown (Requirements: 7.4)
+        self._setup_signal_handlers()
         
         while self._running and not self._shutdown_requested:
             iteration += 1
             loop_start = time.time()
             
             try:
-                # Check DNS propagation
+                # Perform propagation check
                 result = await self.checker.check_propagation(
                     domain=domain,
                     record_type=record_type,
@@ -172,7 +173,8 @@ class DNSPropagationMonitor:
                     self.display.console.clear()
                 
                 # Display elapsed time and update info (Requirements: 8.5)
-                elapsed = datetime.now() - self._start_time
+                start_dt = self._start_time or datetime.now()
+                elapsed = datetime.now() - start_dt
                 elapsed_str = str(elapsed).split('.')[0]  # Remove microseconds
                 
                 self.display.console.print(

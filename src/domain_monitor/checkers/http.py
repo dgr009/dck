@@ -24,7 +24,7 @@ class HTTPChecker(BaseChecker):
     status codes to determine domain accessibility.
     """
     
-    async def check(self, domain: str, **kwargs) -> CheckResult:
+    async def check(self, domain: str, **kwargs: Any) -> CheckResult:
         """
         Check HTTP/HTTPS status for the specified domain.
         

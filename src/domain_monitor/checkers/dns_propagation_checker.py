@@ -9,7 +9,7 @@ import asyncio
 import logging
 import time
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import dns.resolver
 import dns.exception
@@ -67,7 +67,7 @@ class DNSPropagationChecker:
         self,
         domain: str,
         record_type: str,
-        expected_value: Optional[str] = None
+        expected_value: Optional[Union[str, List[str]]] = None
     ) -> PropagationResult:
         """Check DNS propagation across all configured DNS servers.
         
@@ -290,7 +290,7 @@ class DNSPropagationChecker:
     
     def _values_match(
         self,
-        expected: str,
+        expected: Union[str, List[str]],
         actual_values: List[str],
         record_type: str
     ) -> bool:
@@ -311,8 +311,11 @@ class DNSPropagationChecker:
         if not actual_values:
             return False
         
-        # Normalize expected value
-        expected_normalized = expected.strip().lower()
+        # Normalize expected value(s)
+        if isinstance(expected, list):
+            expected_list = [exp.strip().lower() for exp in expected]
+        else:
+            expected_list = [expected.strip().lower()]
         
         # For record types that can have multiple values, check if expected matches any
         for value in actual_values:
@@ -322,9 +325,9 @@ class DNSPropagationChecker:
             if record_type == 'MX' and ' ' in value_normalized:
                 # Extract just the domain part for comparison
                 mx_domain = value_normalized.split(' ', 1)[1]
-                if expected_normalized == mx_domain or expected_normalized == value_normalized:
+                if any(exp in (mx_domain, value_normalized) for exp in expected_list):
                     return True
-            elif expected_normalized == value_normalized:
+            elif value_normalized in expected_list:
                 return True
         
         return False

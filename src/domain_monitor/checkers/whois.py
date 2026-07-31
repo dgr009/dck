@@ -9,7 +9,7 @@ import asyncio
 import logging
 import time
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 
 import whois
 
@@ -33,7 +33,7 @@ class WhoisChecker(BaseChecker):
     - GREEN (OK): >= 60 days
     """
     
-    async def check(self, domain: str, **kwargs) -> CheckResult:
+    async def check(self, domain: str, **kwargs: Any) -> CheckResult:
         """
         Execute WHOIS check for the specified domain.
         
@@ -135,7 +135,7 @@ class WhoisChecker(BaseChecker):
                 details={"error_type": type(e).__name__}
             )
     
-    def _extract_registrar(self, whois_data) -> Optional[str]:
+    def _extract_registrar(self, whois_data: Any) -> Optional[str]:
         """
         Extract registrar information from WHOIS data.
         
@@ -148,11 +148,11 @@ class WhoisChecker(BaseChecker):
         if hasattr(whois_data, 'registrar'):
             registrar = whois_data.registrar
             if isinstance(registrar, list):
-                return registrar[0] if registrar else None
-            return registrar
+                return str(registrar[0]) if registrar else None
+            return str(registrar) if registrar is not None else None
         return None
     
-    def _extract_status(self, whois_data) -> Optional[str]:
+    def _extract_status(self, whois_data: Any) -> Optional[str]:
         """
         Extract domain status from WHOIS data.
         
@@ -165,11 +165,11 @@ class WhoisChecker(BaseChecker):
         if hasattr(whois_data, 'status'):
             status = whois_data.status
             if isinstance(status, list):
-                return ', '.join(status) if status else None
-            return status
+                return ', '.join(str(s) for s in status) if status else None
+            return str(status) if status is not None else None
         return None
     
-    def _extract_country(self, whois_data) -> Optional[str]:
+    def _extract_country(self, whois_data: Any) -> Optional[str]:
         """
         Extract country information from WHOIS data.
         
@@ -182,11 +182,11 @@ class WhoisChecker(BaseChecker):
         if hasattr(whois_data, 'country'):
             country = whois_data.country
             if isinstance(country, list):
-                return country[0] if country else None
-            return country
+                return str(country[0]) if country else None
+            return str(country) if country is not None else None
         return None
     
-    def _extract_expiration_date(self, whois_data) -> Optional[datetime]:
+    def _extract_expiration_date(self, whois_data: Any) -> Optional[datetime]:
         """
         Extract expiration date from WHOIS data.
         

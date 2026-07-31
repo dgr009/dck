@@ -56,7 +56,7 @@ class BaseChecker(ABC):
         self.timeout = timeout
     
     @abstractmethod
-    async def check(self, domain: str, **kwargs) -> CheckResult:
+    async def check(self, domain: str, **kwargs: Any) -> CheckResult:
         """
         Execute the check for the specified domain.
         

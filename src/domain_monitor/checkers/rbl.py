@@ -6,7 +6,7 @@ Checks if domain IPs and mail server IPs are listed in spam blacklists.
 
 import asyncio
 import logging
-from typing import List, Set, Tuple
+from typing import List, Set, Tuple, Any
 import dns.resolver
 import dns.exception
 
@@ -43,7 +43,7 @@ class RBLChecker(BaseChecker):
         self.resolver.timeout = timeout
         self.resolver.lifetime = timeout
     
-    async def check(self, domain: str, **kwargs) -> CheckResult:
+    async def check(self, domain: str, **kwargs: Any) -> CheckResult:
         """
         Check if domain or mail server IPs are listed in RBLs.
         
@@ -178,9 +178,11 @@ class RBLChecker(BaseChecker):
             for mx_rdata in mx_answers:
                 mx_hostname = str(mx_rdata.exchange).rstrip('.')
                 try:
+                    def _resolve_host(h: str = mx_hostname) -> Any:
+                        return self.resolver.resolve(h, 'A')
                     mx_a_answers = await loop.run_in_executor(
                         None,
-                        lambda h=mx_hostname: self.resolver.resolve(h, 'A')
+                        _resolve_host
                     )
                     for a_rdata in mx_a_answers:
                         ips.add(str(a_rdata))

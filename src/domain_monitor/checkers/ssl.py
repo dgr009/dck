@@ -29,7 +29,7 @@ class SSLChecker(BaseChecker):
     and validates its expiration date and details.
     """
     
-    async def check(self, domain: str, **kwargs) -> CheckResult:
+    async def check(self, domain: str, **kwargs: Any) -> CheckResult:
         """
         Check SSL certificate for the specified domain.
         
@@ -207,14 +207,16 @@ class SSLChecker(BaseChecker):
             for component in x509.get_issuer().get_components():
                 issuer_components.append((component[0].decode(), component[1].decode()))
             
+            not_before_bytes = x509.get_notBefore()
+            not_after_bytes = x509.get_notAfter()
             cert_dict = {
                 '_der': cert_der,
                 'subject': tuple(subject_components),
                 'issuer': tuple(issuer_components),
                 'version': x509.get_version(),
                 'serialNumber': str(x509.get_serial_number()),
-                'notBefore': x509.get_notBefore().decode(),
-                'notAfter': x509.get_notAfter().decode(),
+                'notBefore': not_before_bytes.decode('ascii') if not_before_bytes else '',
+                'notAfter': not_after_bytes.decode('ascii') if not_after_bytes else '',
             }
             
             # Extract SANs if available
@@ -222,8 +224,9 @@ class SSLChecker(BaseChecker):
             try:
                 cert_crypto = x509.to_cryptography()
                 san_ext = cert_crypto.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
-                for dns_name in san_ext.value.get_values_for_type(crypto_x509.DNSName):
-                    sans.append(('DNS', dns_name))
+                if isinstance(san_ext.value, crypto_x509.SubjectAlternativeName):
+                    for dns_name in san_ext.value.get_values_for_type(crypto_x509.DNSName):
+                        sans.append(('DNS', dns_name))
             except Exception:
                 pass
             
@@ -295,10 +298,13 @@ class SSLChecker(BaseChecker):
                 try:
                     x509 = crypto.load_certificate(crypto.FILETYPE_ASN1, cert_dict['_der'])
                     not_after_bytes = x509.get_notAfter()
-                    # Format: b'20251105103000Z'
-                    not_after_str = not_after_bytes.decode('ascii')
-                    expiration_date = datetime.strptime(not_after_str, '%Y%m%d%H%M%SZ')
-                    expiration_date = expiration_date.replace(tzinfo=timezone.utc)
+                    if not_after_bytes:
+                        # Format: b'20251105103000Z'
+                        not_after_str = not_after_bytes.decode('ascii')
+                        expiration_date = datetime.strptime(not_after_str, '%Y%m%d%H%M%SZ')
+                        expiration_date = expiration_date.replace(tzinfo=timezone.utc)
+                    else:
+                        expiration_date = datetime.now(timezone.utc)
                 except Exception:
                     # Last resort: use current time (will show as expired)
                     expiration_date = datetime.now(timezone.utc)

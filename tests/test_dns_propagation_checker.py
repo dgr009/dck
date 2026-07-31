@@ -1050,6 +1050,8 @@ class TestErrorLogging:
                 ("192.0.2.3", "Unreachable 3", "Test"),
             ]
             checker = DNSPropagationChecker(custom_servers=test_servers)
+            from domain_monitor.checkers.dns_propagation_checker import DNSServerInfo
+            checker.dns_servers = [DNSServerInfo(ip=ip, name=name, location=loc) for ip, name, loc in test_servers]
             
             # Query
             result = await checker.check_propagation("google.com", "A")

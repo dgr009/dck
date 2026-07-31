@@ -1,6 +1,6 @@
 """Live display component for real-time domain status monitoring."""
 
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Sequence, Union
 from datetime import datetime
 import sys
 import logging
@@ -88,7 +88,7 @@ class LiveDisplay:
             finally:
                 self.live = None
 
-    def update(self, statuses: List[DomainStatus]) -> None:
+    def update(self, statuses: Sequence[Union[DomainStatus, EndpointStatus]]) -> None:
         """
         Update the display with new status data.
         
@@ -108,7 +108,7 @@ class LiveDisplay:
                 self.fallback_mode = True
                 self._fallback_update(statuses)
 
-    def _create_table(self, statuses: List[DomainStatus]) -> Table:
+    def _create_table(self, statuses: Sequence[Union[DomainStatus, EndpointStatus]]) -> Table:
         """
         Create Rich table from status data.
         
@@ -119,7 +119,7 @@ class LiveDisplay:
             Rich Table object with formatted status data
         """
         # Check if we're dealing with EndpointStatus objects
-        is_endpoint_status = statuses and isinstance(statuses[0], EndpointStatus)
+        is_endpoint_status = bool(statuses and isinstance(statuses[0], EndpointStatus))
         
         if is_endpoint_status:
             title = "Live Endpoint Status Monitor"
@@ -152,14 +152,15 @@ class LiveDisplay:
 
             # Add rows for each endpoint
             for status in statuses:
-                table.add_row(
-                    status.method,
-                    status.endpoint_name,
-                    self._format_status_code(status.status_code),
-                    self._format_response_time(status.response_time),
-                    self._format_headers(status.config.headers),
-                    self._format_error(status.error, max_length=40)
-                )
+                if isinstance(status, EndpointStatus):
+                    table.add_row(
+                        status.method,
+                        status.endpoint_name,
+                        self._format_status_code(status.status_code),
+                        self._format_response_time(status.response_time),
+                        self._format_headers(status.config.headers),
+                        self._format_error(status.error, max_length=40)
+                    )
         else:
             # Add columns for domain monitoring (legacy format)
             table.add_column("Domain", style="white", no_wrap=True)
@@ -169,12 +170,13 @@ class LiveDisplay:
 
             # Add rows for each domain
             for status in statuses:
-                table.add_row(
-                    status.domain,
-                    self._format_status_code(status.status_code),
-                    self._format_response_time(status.response_time),
-                    self._format_error(status.error, max_length=50)
-                )
+                if isinstance(status, DomainStatus):
+                    table.add_row(
+                        status.domain,
+                        self._format_status_code(status.status_code),
+                        self._format_response_time(status.response_time),
+                        self._format_error(status.error, max_length=50)
+                    )
 
         return table
 
@@ -287,7 +289,7 @@ class LiveDisplay:
         # Truncate and add ellipsis
         return error[:max_length - 3] + "..."
 
-    def _fallback_update(self, statuses: List[DomainStatus]) -> None:
+    def _fallback_update(self, statuses: Sequence[Union[DomainStatus, EndpointStatus]]) -> None:
         """
         Simple text-based fallback update when Rich library fails.
         
@@ -298,7 +300,7 @@ class LiveDisplay:
         print("\033[2J\033[H", end="")
         
         # Check if we're dealing with EndpointStatus objects
-        is_endpoint_status = statuses and isinstance(statuses[0], EndpointStatus)
+        is_endpoint_status = bool(statuses and isinstance(statuses[0], EndpointStatus))
         
         # Print header
         print("=" * 100)
@@ -328,7 +330,7 @@ class LiveDisplay:
             if len(error_str) > 40:
                 error_str = error_str[:37] + "..."
             
-            if is_endpoint_status:
+            if is_endpoint_status and isinstance(status, EndpointStatus):
                 # Format headers
                 headers_str = self._format_headers(status.config.headers)
                 
@@ -337,7 +339,7 @@ class LiveDisplay:
                     f"{status.method:8s} | {status.endpoint_name:30s} | {status_str:12s} | "
                     f"{status.response_time:6.3f}s | {headers_str:12s} | {error_str}"
                 )
-            else:
+            elif isinstance(status, DomainStatus):
                 # Print domain status line (legacy format)
                 print(
                     f"{status.domain:30s} | {status_str:12s} | "

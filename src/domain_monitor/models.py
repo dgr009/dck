@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 from urllib.parse import urlparse
 import json
 import re
@@ -99,7 +99,7 @@ class EndpointConfig:
     body: Optional[str] = None  # Request body (JSON string or plain text)
     timeout: float = 5.0  # Request timeout in seconds
     
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate configuration after initialization."""
         # Validate HTTP method
         if self.method.upper() not in VALID_HTTP_METHODS:
@@ -125,7 +125,7 @@ class EndpointConfig:
         if self.timeout <= 0:
             raise ValueError(f"Timeout must be positive, got {self.timeout}")
     
-    def _validate_url(self):
+    def _validate_url(self) -> None:
         """Validate and sanitize URL format."""
         if not self.url:
             raise ValueError("URL cannot be empty")
@@ -295,7 +295,7 @@ class PropagationResult:
     """Result of DNS propagation check across multiple servers."""
     domain: str
     record_type: str
-    expected_value: Optional[str]
+    expected_value: Optional[Union[str, List[str]]]
     query_results: List[DNSQueryResult]
     timestamp: datetime
     

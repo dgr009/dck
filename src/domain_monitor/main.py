@@ -10,7 +10,7 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Any
 
 import click
 
@@ -647,7 +647,7 @@ def dns_propagation_command(
             )
             
             # Query all record types concurrently (Requirements: 3.7)
-            async def check_all_types():
+            async def check_all_types() -> List[Any]:
                 tasks = [
                     checker.check_propagation(domain, rt, expected)
                     for rt in types_list

@@ -34,7 +34,7 @@ class DNSChecker(BaseChecker):
         '9.9.9.9',      # Quad9
     ]
     
-    async def check(self, domain: str, **kwargs) -> CheckResult:
+    async def check(self, domain: str, **kwargs: Any) -> CheckResult:
         """
         Execute DNS check for the specified domain.
         
@@ -54,9 +54,9 @@ class DNSChecker(BaseChecker):
         logger.debug(f"Starting DNS check for domain: {domain}")
         
         try:
-            details = {}
+            details: Dict[str, Any] = {}
             warnings = []
-            timing_details = {}
+            timing_details: Dict[str, Any] = {}
             
             # Query all DNS record types in parallel (Requirements: 6.1-6.6)
             logger.debug(f"Querying DNS records for {domain}")
@@ -72,11 +72,11 @@ class DNSChecker(BaseChecker):
                 return_exceptions=True
             )
             
-            a_records = results[0] if not isinstance(results[0], Exception) else []
-            aaaa_records = results[1] if not isinstance(results[1], Exception) else []
-            mx_records = results[2] if not isinstance(results[2], Exception) else []
-            ns_records = results[3] if not isinstance(results[3], Exception) else []
-            txt_records = results[4] if not isinstance(results[4], Exception) else []
+            a_records = results[0] if not isinstance(results[0], BaseException) else []
+            aaaa_records = results[1] if not isinstance(results[1], BaseException) else []
+            mx_records = results[2] if not isinstance(results[2], BaseException) else []
+            ns_records = results[3] if not isinstance(results[3], BaseException) else []
+            txt_records = results[4] if not isinstance(results[4], BaseException) else []
             
             timing_details['all_queries_time'] = time.time() - record_start
             logger.debug(f"All DNS records queried for {domain} in {timing_details['all_queries_time']:.3f}s")
@@ -267,9 +267,9 @@ class DNSChecker(BaseChecker):
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         # Build results dictionary
-        server_results = {}
+        server_results: Dict[str, List[str]] = {}
         for server, result in zip(self.PUBLIC_DNS_SERVERS, results):
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 server_results[server] = []
             else:
                 server_results[server] = sorted(result)  # Sort for comparison
