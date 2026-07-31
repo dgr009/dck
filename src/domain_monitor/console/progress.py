@@ -62,6 +62,31 @@ class ProgressTracker:
                 description=f"[cyan]Checking {domain}..."
             )
 
+    def update_check(self, domain: str, check_type: str) -> None:
+        """
+        현재 실행 중인 특정 검사 항목 업데이트
+        
+        Args:
+            domain: 도메인 이름
+            check_type: 검사 유형 (dns, ssl, http 등)
+        """
+        if self.task_id is not None:
+            self.progress.update(
+                self.task_id,
+                description=f"[cyan]Checking {domain} ([yellow]{check_type}[/yellow])..."
+            )
+
+    def complete_check(self, domain: str, check_type: str) -> None:
+        """
+        개별 검사 항목 완료 처리
+        
+        Args:
+            domain: 도메인 이름
+            check_type: 검사 유형
+        """
+        if self.task_id is not None:
+            self.progress.advance(self.task_id, 1)
+
     def complete_domain(self, domain: str, status: str) -> None:
         """
         도메인 체크 완료 표시

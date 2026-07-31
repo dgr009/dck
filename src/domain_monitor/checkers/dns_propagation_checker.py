@@ -29,6 +29,8 @@ class DNSPropagationChecker:
         ('1.1.1.1', 'Cloudflare Primary', 'Global'),
         ('1.0.0.1', 'Cloudflare Secondary', 'Global'),
         ('9.9.9.9', 'Quad9', 'Global'),
+        ('119.29.29.29', 'Tencent DNSPod', 'China'),
+        ('223.5.5.5', 'AliDNS Primary', 'China'),
         ('208.67.222.222', 'OpenDNS Primary', 'Global'),
         ('208.67.220.220', 'OpenDNS Secondary', 'Global'),
         ('64.6.64.6', 'Verisign', 'Global'),
@@ -107,9 +109,9 @@ class DNSPropagationChecker:
         query_results = await asyncio.gather(*tasks, return_exceptions=True)
         
         # Convert exceptions to error results
-        final_results = []
+        final_results: List[DNSQueryResult] = []
         for i, result in enumerate(query_results):
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 server = self.dns_servers[i]
                 logger.error(f"Query failed for server {server.name}: {result}")
                 final_results.append(DNSQueryResult(
@@ -176,7 +178,7 @@ class DNSPropagationChecker:
                     record_type,
                     server.ip
                 ),
-                timeout=5.0  # 5 second timeout per query
+                timeout=7.0  # 5 second timeout per query
             )
             
             response_time = time.time() - start_time

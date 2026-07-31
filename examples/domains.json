@@ -34,8 +34,7 @@
       "_description": "Staging domain with limited checks",
       "name": "staging.example.com",
       "tags": [
-        "staging",
-        "testing"
+        
       ],
       "checks": [
         "http",
@@ -153,10 +152,10 @@
   ],
   
   "_usage_examples": {
-    "basic": "domain-monitor -f examples/domains.json",
-    "export_json": "domain-monitor -f examples/domains.json -o report.json",
-    "export_csv": "domain-monitor -f examples/domains.json -o report.csv",
-    "debug": "domain-monitor -f examples/domains.json --log-level DEBUG"
+    "basic": "dck -f examples/domains.json",
+    "export_json": "dck -f examples/domains.json -o report.json",
+    "export_csv": "dck -f examples/domains.json -o report.csv",
+    "debug": "dck -f examples/domains.json --log-level DEBUG"
   },
   
   "_status_interpretation": {

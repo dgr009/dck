@@ -563,6 +563,7 @@ class TestWatchModeIntegration:
             ("1.1.1.1", "Cloudflare Primary", "Global"),
         ]
         checker = DNSPropagationChecker(custom_servers=fast_servers)
+        checker.dns_servers = [DNSServerInfo(ip=ip, name=name, location=loc) for ip, name, loc in fast_servers]
         
         # Create real display
         console_manager = ConsoleManager(debug_mode=False)
@@ -575,6 +576,11 @@ class TestWatchModeIntegration:
             interval=0.5
         )
         
+        async def mock_fast_query(domain, record_type, server):
+            return DNSQueryResult(server=server, status='success', values=['1.2.3.4'], response_time=0.01)
+        
+        checker._query_dns_server = mock_fast_query
+
         # Start monitoring in background
         monitor_task = asyncio.create_task(
             monitor.start(

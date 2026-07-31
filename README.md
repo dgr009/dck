@@ -20,16 +20,16 @@ The DNS propagation checker verifies DNS record propagation across multiple publ
 
 ```bash
 # Check A record propagation
-domain-monitor dns-propagation example.com
+dck dns-propagation example.com
 
 # Check with expected value
-domain-monitor dns-propagation example.com --expected "192.0.2.1"
+dck dns-propagation example.com --expected "192.0.2.1"
 
 # Watch mode - monitor until propagation completes
-domain-monitor dns-propagation example.com --watch --expected "192.0.2.1"
+dck dns-propagation example.com --watch --expected "192.0.2.1"
 
 # Check multiple record types
-domain-monitor dns-propagation example.com --record-types A,AAAA,MX
+dck dns-propagation example.com --record-types A,AAAA,MX
 ```
 
 See the [DNS Propagation section](#dns-propagation-checker-1) below for detailed usage.
@@ -114,28 +114,28 @@ domains:
 
 ```bash
 # Use default manifest file (domains.yaml or domains.json)
-domain-monitor
+dck
 
 # Specify a manifest file
-domain-monitor -f /path/to/domains.yaml
+dck -f /path/to/domains.yaml
 
 # Check a single domain without a manifest
-domain-monitor -d example.com
+dck -d example.com
 
 # Export results to JSON
-domain-monitor -f domains.yaml -o report.json
+dck -f domains.yaml -o report.json
 
 # Export results to CSV
-domain-monitor -f domains.yaml -o report.csv
+dck -f domains.yaml -o report.csv
 
 # Enable debug logging
-domain-monitor --log-level DEBUG
+dck --log-level DEBUG
 
 # Live monitoring mode
-domain-monitor watch -f endpoints.yaml
+dck watch -f endpoints.yaml
 
 # Live monitoring with custom interval
-domain-monitor watch -f endpoints.yaml --interval 2.0
+dck watch -f endpoints.yaml --interval 2.0
 ```
 
 ## Live Monitoring Mode
@@ -172,7 +172,7 @@ endpoints:
 2. Start live monitoring:
 
 ```bash
-domain-monitor watch -f endpoints.yaml
+dck watch -f endpoints.yaml
 ```
 
 3. Press CTRL+C to stop monitoring
@@ -350,16 +350,16 @@ The monitor automatically logs when endpoint status changes:
 
 ```bash
 # Basic usage with default settings
-domain-monitor watch -f endpoints.yaml
+dck watch -f endpoints.yaml
 
 # Custom check interval (check every 2 seconds)
-domain-monitor watch -f endpoints.yaml --interval 2.0
+dck watch -f endpoints.yaml --interval 2.0
 
 # Custom log file location
-domain-monitor watch -f endpoints.yaml --log-file /var/log/monitor.log
+dck watch -f endpoints.yaml --log-file /var/log/monitor.log
 
 # Combine options
-domain-monitor watch -f endpoints.yaml --interval 0.5 --log-file custom.log
+dck watch -f endpoints.yaml --interval 0.5 --log-file custom.log
 ```
 
 ### Security Best Practices
@@ -896,7 +896,7 @@ The tool looks for manifest files in the following order:
 
 ### Logging
 
-Logs are written to `domain-monitor.log` in the current directory.
+Logs are written to `dck.log` in the current directory.
 
 Log levels:
 - **DEBUG**: Detailed execution flow, all queries
@@ -1046,7 +1046,7 @@ The checker queries 12 major public DNS servers:
 ### Command Reference
 
 ```bash
-domain-monitor dns-propagation DOMAIN [OPTIONS]
+dck dns-propagation DOMAIN [OPTIONS]
 ```
 
 **Options:**
@@ -1063,7 +1063,7 @@ domain-monitor dns-propagation DOMAIN [OPTIONS]
 Check current DNS propagation status:
 
 ```bash
-domain-monitor dns-propagation example.com
+dck dns-propagation example.com
 ```
 
 This shows which DNS servers return which values for the domain's A record.
@@ -1073,7 +1073,7 @@ This shows which DNS servers return which values for the domain's A record.
 Verify that DNS servers are returning your expected value:
 
 ```bash
-domain-monitor dns-propagation example.com --expected "192.0.2.1"
+dck dns-propagation example.com --expected "192.0.2.1"
 ```
 
 The tool will:
@@ -1086,19 +1086,19 @@ The tool will:
 Check AAAA (IPv6) records:
 
 ```bash
-domain-monitor dns-propagation example.com --record-type AAAA
+dck dns-propagation example.com --record-type AAAA
 ```
 
 Check MX (mail) records:
 
 ```bash
-domain-monitor dns-propagation example.com --record-type MX
+dck dns-propagation example.com --record-type MX
 ```
 
 Check TXT records:
 
 ```bash
-domain-monitor dns-propagation example.com --record-type TXT
+dck dns-propagation example.com --record-type TXT
 ```
 
 #### Watch Mode
@@ -1106,7 +1106,7 @@ domain-monitor dns-propagation example.com --record-type TXT
 Monitor propagation progress in real-time:
 
 ```bash
-domain-monitor dns-propagation example.com --watch --expected "192.0.2.1"
+dck dns-propagation example.com --watch --expected "192.0.2.1"
 ```
 
 Watch mode will:
@@ -1118,7 +1118,7 @@ Watch mode will:
 Custom check interval (every 10 seconds):
 
 ```bash
-domain-monitor dns-propagation example.com --watch --interval 10.0 --expected "192.0.2.1"
+dck dns-propagation example.com --watch --interval 10.0 --expected "192.0.2.1"
 ```
 
 #### Multiple Record Types
@@ -1126,7 +1126,7 @@ domain-monitor dns-propagation example.com --watch --interval 10.0 --expected "1
 Check multiple record types in one command:
 
 ```bash
-domain-monitor dns-propagation example.com --record-types A,AAAA,MX
+dck dns-propagation example.com --record-types A,AAAA,MX,NS,TXT
 ```
 
 This displays separate results for each record type.
@@ -1178,10 +1178,10 @@ After migrating to a new hosting provider:
 
 ```bash
 # Check if new IP has propagated
-domain-monitor dns-propagation example.com --expected "203.0.113.1"
+dck dns-propagation example.com --expected "203.0.113.1"
 
 # Watch until fully propagated
-domain-monitor dns-propagation example.com --watch --expected "203.0.113.1"
+dck dns-propagation example.com --watch --expected "203.0.113.1"
 ```
 
 #### 2. Troubleshoot DNS Issues
@@ -1190,10 +1190,10 @@ Identify which DNS servers have stale records:
 
 ```bash
 # Check current state
-domain-monitor dns-propagation example.com
+dck dns-propagation example.com
 
 # Compare against expected
-domain-monitor dns-propagation example.com --expected "192.0.2.1"
+dck dns-propagation example.com --expected "192.0.2.1"
 ```
 
 If some servers show mismatched values, you know which DNS providers haven't updated yet.
@@ -1204,10 +1204,10 @@ After changing MX records:
 
 ```bash
 # Check MX record propagation
-domain-monitor dns-propagation example.com --record-type MX
+dck dns-propagation example.com --record-type MX
 
 # Verify expected mail server
-domain-monitor dns-propagation example.com --record-type MX --expected "10 mail.example.com"
+dck dns-propagation example.com --record-type MX --expected "10 mail.example.com"
 ```
 
 #### 4. Monitor Nameserver Changes
@@ -1216,10 +1216,10 @@ After updating nameservers:
 
 ```bash
 # Check NS records
-domain-monitor dns-propagation example.com --record-type NS
+dck dns-propagation example.com --record-type NS
 
 # Watch propagation
-domain-monitor dns-propagation example.com --record-type NS --watch
+dck dns-propagation example.com --record-type NS --watch
 ```
 
 #### 5. Comprehensive DNS Check
@@ -1304,7 +1304,7 @@ for i in $(seq 1 $MAX_ATTEMPTS); do
     echo "Checking DNS propagation (attempt $i/$MAX_ATTEMPTS)..."
     
     # Run check and capture output
-    OUTPUT=$(domain-monitor dns-propagation $DOMAIN --expected $EXPECTED_IP)
+    OUTPUT=$(dck dns-propagation $DOMAIN --expected $EXPECTED_IP)
     
     # Check if 100% propagated
     if echo "$OUTPUT" | grep -q "Propagation Rate: 100.0%"; then

@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 from hypothesis import given, strategies as st, settings, assume
 import pytest
+import unittest.mock
 
 from domain_monitor.checkers.dns_propagation_checker import DNSPropagationChecker
 from domain_monitor.models import DNSServerInfo, DNSQueryResult, PropagationResult
@@ -225,29 +226,26 @@ class TestParallelQueryExecution:
         
         Validates: Requirements 2.1
         """
-        # Use a subset of default servers
         checker = DNSPropagationChecker()
-        
-        # Limit to specified server count
         checker.dns_servers = checker.dns_servers[:server_count]
         
-        # Query a known domain
-        result = await checker.check_propagation("google.com", "A")
-        
-        # Calculate sum of individual response times
-        total_individual_time = sum(r.response_time for r in result.query_results)
-        
-        # Get actual elapsed time from result timestamp
-        # We'll use the maximum response time as a proxy for total elapsed time
-        # since queries run in parallel
-        max_response_time = max(r.response_time for r in result.query_results)
-        
-        # Verify parallel execution: max time should be much less than sum
-        # For parallel execution, max should be significantly less than sum
-        # Use a more realistic threshold: max should be less than 70% of sum
-        # (accounting for overhead and fast DNS queries)
-        assert max_response_time < total_individual_time * 0.7, \
-            f"Parallel execution not detected: max={max_response_time:.2f}s, sum={total_individual_time:.2f}s"
+        async def mock_query(domain, record_type, server):
+            await asyncio.sleep(0.05)
+            return DNSQueryResult(
+                server=server,
+                status='success',
+                values=['192.0.2.1'],
+                response_time=0.05
+            )
+            
+        with unittest.mock.patch.object(checker, '_query_dns_server', side_effect=mock_query):
+            start_time = time.time()
+            result = await checker.check_propagation("example.com", "A")
+            elapsed_time = time.time() - start_time
+            
+            total_individual_time = sum(r.response_time for r in result.query_results)
+            assert elapsed_time < total_individual_time * 0.7, \
+                f"Parallel execution not detected: elapsed={elapsed_time:.2f}s, sum={total_individual_time:.2f}s"
     
     # Feature: dns-propagation-checker, Property 4: Parallel Query Execution
     @pytest.mark.asyncio

@@ -31,6 +31,7 @@ class TestNXDOMAINHandling:
         # Use a single fast DNS server
         fast_servers = [("8.8.8.8", "Google Primary", "Global")]
         checker = DNSPropagationChecker(custom_servers=fast_servers)
+        checker.dns_servers = [DNSServerInfo(ip=ip, name=name, location=loc) for ip, name, loc in fast_servers]
         
         # Query the nonexistent domain
         result = await checker.check_propagation(nonexistent_domain, "A")

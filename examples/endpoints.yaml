@@ -196,7 +196,7 @@ endpoints:
 #
 # To use this configuration file with the live monitor:
 #
-#   domain-monitor watch -f examples/endpoints.yaml
+#   dck watch -f examples/endpoints.yaml
 #
 # The monitor will:
 # - Check all endpoints every 1 second (configurable with --interval)

@@ -59,7 +59,7 @@ def setup_logging(log_level: str, debug_mode: bool = False) -> None:
     )
     
     # Set up file handler - always logs everything (Requirements: 1.4, 20.1)
-    file_handler = logging.FileHandler('domain-monitor.log', encoding='utf-8')
+    file_handler = logging.FileHandler('dck.log', encoding='utf-8')
     file_handler.setLevel(numeric_level)
     file_handler.setFormatter(formatter)
     
@@ -114,7 +114,7 @@ def resolve_manifest_file(file_path: Optional[str]) -> str:
             "No manifest file found. Please either:\n"
             "  1. Create a 'domains.yaml' or 'domains.json' file in the current directory, or\n"
             "  2. Specify a manifest file using the -f/--file option\n\n"
-            "Example: domain-monitor -f /path/to/manifest.yaml"
+            "Example: dck -f /path/to/manifest.yaml"
         )
     
     return default_path
@@ -212,22 +212,22 @@ def check_command(
     Examples:
     
         # Use default manifest file (domains.yaml or domains.json)
-        domain-monitor check
+        dck check
         
         # Specify manifest file
-        domain-monitor check -f /path/to/domains.yaml
+        dck check -f /path/to/domains.yaml
         
         # Check single domain ad-hoc
-        domain-monitor check -d example.com
+        dck check -d example.com
         
         # Export results to JSON
-        domain-monitor check -f domains.yaml -o report.json
+        dck check -f domains.yaml -o report.json
         
         # Enable debug logging
-        domain-monitor check --log-level DEBUG
+        dck check --log-level DEBUG
         
         # Enable debug mode with verbose console output
-        domain-monitor check --debug
+        dck check --debug
     
     Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 18.1, 19.1, 17.1, 17.2, 20.2
     """
@@ -336,15 +336,15 @@ def check_command(
                 error_msg,
                 details={
                     'error_type': type(e).__name__,
-                    'log_file': 'domain-monitor.log'
+                    'log_file': 'dck.log'
                 },
                 exception=e
             )
-            console_manager.print_info("Check 'domain-monitor.log' for detailed error information.")
+            console_manager.print_info("Check 'dck.log' for detailed error information.")
         except:
             # Fallback to click if ConsoleManager not available
             click.echo(f"\n{click.style('✗', fg='red')} {error_msg}", err=True)
-            click.echo(f"\nCheck 'domain-monitor.log' for detailed error information.", err=True)
+            click.echo(f"\nCheck 'dck.log' for detailed error information.", err=True)
         
         sys.exit(1)
 
@@ -395,16 +395,16 @@ def watch_command(
     Examples:
     
         # Monitor endpoints from default configuration (endpoints.yaml)
-        domain-monitor watch
+        dck watch
         
         # Monitor with custom endpoint configuration
-        domain-monitor watch -f my-endpoints.yaml
+        dck watch -f my-endpoints.yaml
         
         # Custom check interval (2 seconds)
-        domain-monitor watch --interval 2.0
+        dck watch --interval 2.0
         
         # Custom log file location
-        domain-monitor watch --log-file /var/log/monitor.log
+        dck watch --log-file /var/log/monitor.log
     
     Requirements: 5.1, 5.2, 6.1
     """
@@ -576,22 +576,22 @@ def dns_propagation_command(
     Examples:
     
         # Check A record propagation
-        domain-monitor dns-propagation example.com
+        dck dns-propagation example.com
         
         # Check with expected value
-        domain-monitor dns-propagation example.com --expected 192.0.2.1
+        dck dns-propagation example.com --expected 192.0.2.1
         
         # Check AAAA record
-        domain-monitor dns-propagation example.com --record-type AAAA
+        dck dns-propagation example.com --record-type AAAA
         
         # Watch mode - monitor until complete
-        domain-monitor dns-propagation example.com --watch --expected 192.0.2.1
+        dck dns-propagation example.com --watch --expected 192.0.2.1
         
         # Custom check interval
-        domain-monitor dns-propagation example.com --watch --interval 10.0
+        dck dns-propagation example.com --watch --interval 10.0
         
         # Check multiple record types
-        domain-monitor dns-propagation example.com --record-types A,AAAA,MX
+        dck dns-propagation example.com --record-types A,AAAA,MX
     
     Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 9.1, 9.3, 9.4, 10.4
     """
@@ -721,15 +721,15 @@ def dns_propagation_command(
                 error_msg,
                 details={
                     'error_type': type(e).__name__,
-                    'log_file': 'domain-monitor.log'
+                    'log_file': 'dck.log'
                 },
                 exception=e
             )
-            console_manager.print_info("Check 'domain-monitor.log' for detailed error information.")
+            console_manager.print_info("Check 'dck.log' for detailed error information.")
         except:
             # Fallback to click if ConsoleManager not available
             click.echo(f"\n{click.style('✗', fg='red')} {error_msg}", err=True)
-            click.echo(f"\nCheck 'domain-monitor.log' for detailed error information.", err=True)
+            click.echo(f"\nCheck 'dck.log' for detailed error information.", err=True)
         
         sys.exit(1)
 

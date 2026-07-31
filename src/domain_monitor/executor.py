@@ -10,7 +10,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
 
 from .config import ManifestConfig, DomainConfig
 from .checkers.base_checker import BaseChecker, CheckResult
@@ -111,13 +111,19 @@ class DomainExecutor:
         logger.info(f"Starting checks for {len(self.config.domains)} domain(s)")
         start_time = time.time()
         
+        # Calculate total checks for fine-grained progress bar updates
+        total_checks = 0
+        for domain in self.config.domains:
+            checks_to_run = domain.checks if domain.checks else self.config.default_checks
+            total_checks += sum(1 for c in checks_to_run if c in self.checkers)
+
         # Create ProgressTracker if ConsoleManager is available (Requirements: 2.1)
         progress_tracker = None
         if self.console_manager:
             from .console.progress import ProgressTracker
             progress_tracker = ProgressTracker(
                 self.console_manager.console,
-                len(self.config.domains)
+                total_checks if total_checks > 0 else len(self.config.domains)
             )
             progress_tracker.start()
         
@@ -127,28 +133,18 @@ class DomainExecutor:
         async def bounded_execute(domain: DomainConfig) -> DomainResult:
             """Execute domain checks with semaphore limit and progress updates."""
             async with semaphore:
-                # Update progress when starting domain check (Requirements: 2.2)
-                if progress_tracker:
-                    progress_tracker.update_domain(domain.name)
-                
-                result = await self.execute_domain(domain)
-                
-                # Update progress when completing domain check (Requirements: 2.3)
-                if progress_tracker:
-                    progress_tracker.complete_domain(domain.name, result.overall_status)
-                
-                return result
+                return await self.execute_domain(domain, progress_tracker=progress_tracker)
         
         # Execute all domain checks in parallel (Requirements: 15.1)
         tasks = [bounded_execute(domain) for domain in self.config.domains]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         # Filter out exceptions and log them (Requirements: 7.1, 7.2, 7.4)
-        domain_results = []
+        domain_results: List[DomainResult] = []
         execution_errors = []
         
         for i, result in enumerate(results):
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 domain_name = self.config.domains[i].name
                 logger.error(f"Failed to execute checks for {domain_name}: {str(result)}", exc_info=True)
                 
@@ -187,7 +183,11 @@ class DomainExecutor:
         
         return domain_results
     
-    async def execute_domain(self, domain: DomainConfig) -> DomainResult:
+    async def execute_domain(
+        self,
+        domain: DomainConfig,
+        progress_tracker: Optional[Any] = None
+    ) -> DomainResult:
         """
         Execute all enabled checks for a single domain in parallel.
         
@@ -196,6 +196,7 @@ class DomainExecutor:
         
         Args:
             domain: DomainConfig for the domain to check
+            progress_tracker: Optional ProgressTracker for real-time progress updates
             
         Returns:
             DomainResult with all check results and aggregated status
@@ -212,6 +213,14 @@ class DomainExecutor:
         tasks = []
         check_types = []
         
+        async def run_single_check(c_type: str, c_checker: Any, d_name: str, **c_kwargs: Any) -> Any:
+            if progress_tracker:
+                progress_tracker.update_check(d_name, c_type)
+            res = await safe_check(c_checker, d_name, **c_kwargs)
+            if progress_tracker:
+                progress_tracker.complete_check(d_name, c_type)
+            return res
+
         for check_type in checks_to_run:
             if check_type not in self.checkers:
                 logger.warning(f"Unknown check type '{check_type}' for domain {domain.name}")
@@ -224,8 +233,8 @@ class DomainExecutor:
             if check_type == 'security' and domain.dkim_selectors:
                 kwargs['dkim_selectors'] = domain.dkim_selectors
             
-            # Wrap check in safe_check for error handling
-            task = safe_check(checker, domain.name, **kwargs)
+            # Wrap check in safe_check for error handling and progress updates
+            task = run_single_check(check_type, checker, domain.name, **kwargs)
             tasks.append(task)
             check_types.append(check_type)
         
@@ -233,11 +242,11 @@ class DomainExecutor:
         check_results = await asyncio.gather(*tasks, return_exceptions=True)
         
         # Build results dictionary and collect errors (Requirements: 7.1, 7.2)
-        results = {}
+        results: Dict[str, CheckResult] = {}
         check_errors = []
         
         for check_type, result in zip(check_types, check_results):
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 # Create error result for failed check
                 error_msg = str(result) if str(result) else f"{type(result).__name__} occurred"
                 logger.error(f"Check {check_type} failed for {domain.name}: {error_msg}", exc_info=True)
@@ -342,7 +351,7 @@ class DomainExecutor:
         return CheckResult.OK
 
 
-async def safe_check(checker: BaseChecker, domain: str, **kwargs) -> CheckResult:
+async def safe_check(checker: BaseChecker, domain: str, **kwargs: Any) -> CheckResult:
     """
     Wrapper to handle checker calls with timeout and error handling.
     

@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 from OpenSSL import crypto
+from cryptography import x509 as crypto_x509
+from cryptography.x509.oid import ExtensionOID
 
 from .base_checker import BaseChecker, CheckResult
 
@@ -216,20 +218,16 @@ class SSLChecker(BaseChecker):
             }
             
             # Extract SANs if available
-            san_ext = None
-            for i in range(x509.get_extension_count()):
-                ext = x509.get_extension(i)
-                if ext.get_short_name() == b'subjectAltName':
-                    san_ext = str(ext)
-                    break
+            sans = []
+            try:
+                cert_crypto = x509.to_cryptography()
+                san_ext = cert_crypto.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+                for dns_name in san_ext.value.get_values_for_type(crypto_x509.DNSName):
+                    sans.append(('DNS', dns_name))
+            except Exception:
+                pass
             
-            if san_ext:
-                # Parse SANs from extension string
-                sans = []
-                for part in san_ext.split(','):
-                    part = part.strip()
-                    if part.startswith('DNS:'):
-                        sans.append(('DNS', part[4:]))
+            if sans:
                 cert_dict['subjectAltName'] = tuple(sans)
             
             return cert_dict

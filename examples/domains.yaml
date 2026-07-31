@@ -170,16 +170,16 @@ domains:
 # ============================================================================
 #
 # Run with this manifest file:
-#   domain-monitor -f examples/domains.yaml
+#   dck -f examples/domains.yaml
 #
 # Export results to JSON:
-#   domain-monitor -f examples/domains.yaml -o report.json
+#   dck -f examples/domains.yaml -o report.json
 #
 # Export results to CSV:
-#   domain-monitor -f examples/domains.yaml -o report.csv
+#   dck -f examples/domains.yaml -o report.csv
 #
 # Enable debug logging:
-#   domain-monitor -f examples/domains.yaml --log-level DEBUG
+#   dck -f examples/domains.yaml --log-level DEBUG
 #
 # ============================================================================
 # CHECK RESULTS INTERPRETATION
