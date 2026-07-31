@@ -41,8 +41,6 @@ class SecurityChecker(BaseChecker):
             
         Returns:
             CheckResult with security status and details
-            
-        Requirements: 2.5
         """
         check_start_time = time.time()
         logger.debug(f"Starting security check for domain: {domain}")
@@ -169,11 +167,9 @@ class SecurityChecker(BaseChecker):
                 - message: Description of the SPF status
                 - record: The SPF record if found
                 - validation: Validation results if record found
-                
-        Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
         """
         try:
-            # Query TXT records (Requirements: 9.1)
+            # Query TXT records
             loop = asyncio.get_event_loop()
             txt_records = await loop.run_in_executor(
                 None,
@@ -181,7 +177,7 @@ class SecurityChecker(BaseChecker):
                 domain
             )
             
-            # Find SPF record (starts with "v=spf1") (Requirements: 9.2)
+            # Find SPF record (starts with "v=spf1")
             spf_record = None
             for record in txt_records:
                 if record.startswith('v=spf1'):
@@ -189,7 +185,7 @@ class SecurityChecker(BaseChecker):
                     break
             
             if not spf_record:
-                # SPF record not found (Requirements: 9.3)
+                # SPF record not found
                 return {
                     'status': 'WARNING',
                     'message': 'Missing SPF',
@@ -197,7 +193,7 @@ class SecurityChecker(BaseChecker):
                     'validation': None
                 }
             
-            # Validate SPF syntax (Requirements: 9.4, 9.5)
+            # Validate SPF syntax
             validation = self._validate_spf_syntax(spf_record)
             
             if not validation['valid']:
@@ -265,16 +261,14 @@ class SecurityChecker(BaseChecker):
                 - valid: Boolean indicating if SPF is valid and secure
                 - message: Description of validation result
                 - issues: List of specific issues found
-                
-        Requirements: 9.4, 9.5
         """
         issues = []
         
-        # Check for "+all" mechanism (Requirements: 9.4)
+        # Check for "+all" mechanism
         if '+all' in spf_record:
             issues.append('Contains "+all" mechanism (allows all senders - insecure)')
         
-        # Check for basic syntax validity (Requirements: 9.5)
+        # Check for basic syntax validity
         if not spf_record.startswith('v=spf1'):
             issues.append('Does not start with "v=spf1"')
         
@@ -320,11 +314,9 @@ class SecurityChecker(BaseChecker):
                 - message: Description of the DMARC status
                 - record: The DMARC record if found
                 - policy: The DMARC policy (p= tag value) if found
-                
-        Requirements: 10.1, 10.2, 10.3, 10.4
         """
         try:
-            # Query TXT records at _dmarc subdomain (Requirements: 10.1)
+            # Query TXT records at _dmarc subdomain
             dmarc_domain = f'_dmarc.{domain}'
             loop = asyncio.get_event_loop()
             txt_records = await loop.run_in_executor(
@@ -333,7 +325,7 @@ class SecurityChecker(BaseChecker):
                 dmarc_domain
             )
             
-            # Find DMARC record (contains "v=DMARC1") (Requirements: 10.2)
+            # Find DMARC record (contains "v=DMARC1")
             dmarc_record = None
             for record in txt_records:
                 if 'v=DMARC1' in record:
@@ -341,7 +333,7 @@ class SecurityChecker(BaseChecker):
                     break
             
             if not dmarc_record:
-                # DMARC record not found (Requirements: 10.4)
+                # DMARC record not found
                 return {
                     'status': 'WARNING',
                     'message': 'Missing DMARC',
@@ -349,7 +341,7 @@ class SecurityChecker(BaseChecker):
                     'policy': None
                 }
             
-            # Extract policy (p=) tag (Requirements: 10.3)
+            # Extract policy (p=) tag
             policy = None
             policy_match = re.search(r'p=(\w+)', dmarc_record)
             if policy_match:
@@ -386,14 +378,12 @@ class SecurityChecker(BaseChecker):
                 - status: OK or WARNING
                 - message: Description of the DKIM status
                 - selectors: Dict mapping selector names to their check results
-                
-        Requirements: 11.1, 11.2, 11.3
         """
         try:
             selector_results = {}
             missing_selectors = []
             
-            # Check each selector (Requirements: 11.1)
+            # Check each selector
             for selector in selectors:
                 dkim_domain = f'{selector}._domainkey.{domain}'
                 
@@ -416,7 +406,7 @@ class SecurityChecker(BaseChecker):
                 dkim_found = False
                 dkim_record = None
                 
-                # Check TXT records for "v=DKIM1" (Requirements: 11.3)
+                # Check TXT records for "v=DKIM1"
                 for record in txt_records:
                     if 'v=DKIM1' in record:
                         dkim_found = True
@@ -434,7 +424,7 @@ class SecurityChecker(BaseChecker):
                         'record': dkim_record
                     }
                 else:
-                    # DKIM record not found for this selector (Requirements: 11.2)
+                    # DKIM record not found for this selector
                     selector_results[selector] = {
                         'found': False,
                         'record': None
@@ -499,11 +489,9 @@ class SecurityChecker(BaseChecker):
                 - message: Description of the DNSSEC status
                 - ds_records: List of DS records if found
                 - dnskey_records: List of DNSKEY records if found
-                
-        Requirements: 12.1, 12.2, 12.3
         """
         try:
-            # Query DS records (Requirements: 12.1)
+            # Query DS records
             loop = asyncio.get_event_loop()
             ds_records = await loop.run_in_executor(
                 None,
@@ -512,7 +500,7 @@ class SecurityChecker(BaseChecker):
                 'DS'
             )
             
-            # Query DNSKEY records (Requirements: 12.1)
+            # Query DNSKEY records
             dnskey_records = await loop.run_in_executor(
                 None,
                 self._query_dnssec_records_sync,
@@ -520,7 +508,7 @@ class SecurityChecker(BaseChecker):
                 'DNSKEY'
             )
             
-            # Check if either DS or DNSKEY records exist (Requirements: 12.3)
+            # Check if either DS or DNSKEY records exist
             if ds_records or dnskey_records:
                 return {
                     'status': 'OK',
@@ -529,7 +517,7 @@ class SecurityChecker(BaseChecker):
                     'dnskey_records': dnskey_records
                 }
             else:
-                # Neither DS nor DNSKEY found (Requirements: 12.2)
+                # Neither DS nor DNSKEY found
                 return {
                     'status': 'WARNING',
                     'message': 'DNSSEC Not Enabled',
@@ -587,11 +575,9 @@ class SecurityChecker(BaseChecker):
                 - message: Description of the security headers status
                 - headers: Dict of header names to their values (or None if missing)
                 - missing_headers: List of missing security headers
-                
-        Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6
         """
         try:
-            # Required security headers (Requirements: 14.2, 14.3, 14.4, 14.5)
+            # Required security headers
             required_headers = [
                 'Strict-Transport-Security',
                 'Content-Security-Policy',
@@ -599,7 +585,7 @@ class SecurityChecker(BaseChecker):
                 'X-Content-Type-Options'
             ]
             
-            # Send HTTPS request and capture headers (Requirements: 14.1)
+            # Send HTTPS request and capture headers
             url = f'https://{domain}'
             timeout = aiohttp.ClientTimeout(total=self.timeout)
             
@@ -625,7 +611,7 @@ class SecurityChecker(BaseChecker):
                             header_results[header] = None
                             missing_headers.append(header)
                     
-                    # Determine status (Requirements: 14.6)
+                    # Determine status
                     if missing_headers:
                         return {
                             'status': 'WARNING',

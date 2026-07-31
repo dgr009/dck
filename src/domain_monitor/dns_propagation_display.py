@@ -45,8 +45,6 @@ class DNSPropagationDisplay:
         Args:
             result: PropagationResult to display
             watch_mode: If True, use live display format
-            
-        Requirements: 1.5, 5.2, 5.4, 8.1, 8.2, 8.3, 8.4, 8.6
         """
         # Display summary with propagation rate
         self.display_summary(result)
@@ -81,8 +79,6 @@ class DNSPropagationDisplay:
         
         Args:
             result: PropagationResult to summarize
-            
-        Requirements: 5.2, 5.4, 8.3
         """
         summary_text = Text()
         
@@ -100,7 +96,7 @@ class DNSPropagationDisplay:
         
         summary_text.append("\n", style="white")
         
-        # Propagation rate (Requirements: 5.2)
+        # Propagation rate
         rate = result.propagation_rate
         rate_color = self._get_rate_color(rate)
         summary_text.append("Propagation Rate: ", style="bold")
@@ -112,7 +108,7 @@ class DNSPropagationDisplay:
         
         summary_text.append("\n\n", style="white")
         
-        # Server counts (Requirements: 5.4)
+        # Server counts
         summary_text.append("Server Status:\n", style="bold")
         summary_text.append(f"  {ICONS['success']} Matched: ", style="green")
         summary_text.append(f"{result.matched_count}\n", style="white")
@@ -155,10 +151,8 @@ class DNSPropagationDisplay:
         
         Args:
             result: PropagationResult with server query results
-            
-        Requirements: 1.5, 8.1, 8.2, 8.6
         """
-        # Create table with Unicode box-drawing characters (Requirements: 8.6)
+        # Create table with Unicode box-drawing characters
         table = Table(
             title="DNS Server Results",
             show_header=True,
@@ -167,7 +161,7 @@ class DNSPropagationDisplay:
             show_lines=True
         )
         
-        # Add columns (Requirements: 8.1)
+        # Add columns
         table.add_column("DNS Server", style="cyan", no_wrap=True, width=20)
         table.add_column("Location", style="white", width=12)
         table.add_column("Status", justify="center", width=12)
@@ -178,7 +172,7 @@ class DNSPropagationDisplay:
         for query_result in result.query_results:
             server = query_result.server
             
-            # Format status with color coding (Requirements: 8.2)
+            # Format status with color coding
             status_text = self._format_status(query_result.status)
             
             # Format values
@@ -216,8 +210,6 @@ class DNSPropagationDisplay:
         
         Args:
             rate: Propagation rate as percentage (0-100)
-            
-        Requirements: 8.4
         """
         # Determine color based on rate
         if rate == 100.0:
@@ -248,8 +240,6 @@ class DNSPropagationDisplay:
             
         Returns:
             Rich Text object with colored status and icon
-            
-        Requirements: 8.2
         """
         status_text = Text()
         

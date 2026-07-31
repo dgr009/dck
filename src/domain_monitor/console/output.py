@@ -104,14 +104,12 @@ class ConsoleManager:
             details: Optional dictionary with additional context (domain, check_type, etc.)
             exception: Optional exception object for extracting traceback
             show_traceback: Force showing traceback even in non-debug mode
-            
-        Requirements: 7.1, 7.2, 7.3, 7.5
         """
         error_text = Text()
         error_text.append(f"{ICONS['error']} ", style="error")
         error_text.append(message, style="error")
         
-        # Add context information (Requirements: 7.2)
+        # Add context information
         if details:
             error_text.append("\n\n", style="white")
             error_text.append("Context:\n", style="bold dim")
@@ -119,7 +117,7 @@ class ConsoleManager:
                 error_text.append(f"  {key.replace('_', ' ').title()}: ", style="dim")
                 error_text.append(f"{value}\n", style="white")
         
-        # Add actionable suggestions for common errors (Requirements: 7.5)
+        # Add actionable suggestions for common errors
         suggestion = self._get_error_suggestion(message, details)
         if suggestion:
             error_text.append("\n", style="white")
@@ -135,7 +133,7 @@ class ConsoleManager:
         
         self.console.print(panel)
         
-        # Display stack trace in debug mode with syntax highlighting (Requirements: 7.3)
+        # Display stack trace in debug mode with syntax highlighting
         if (self.debug_mode or show_traceback) and exception:
             self._print_traceback(exception)
     
@@ -151,8 +149,6 @@ class ConsoleManager:
             
         Returns:
             Suggestion string or None if no suggestion available
-            
-        Requirements: 7.5
         """
         message_lower = message.lower()
         
@@ -202,8 +198,6 @@ class ConsoleManager:
         
         Args:
             exception: Exception object to display traceback for
-            
-        Requirements: 7.3
         """
         if not hasattr(exception, '__traceback__'):
             return
@@ -247,13 +241,11 @@ class ConsoleManager:
                 - domain: Optional domain name
                 - check_type: Optional check type
                 - exception: Optional exception object
-                
-        Requirements: 7.4
         """
         if not errors:
             return
         
-        # Group errors by type (Requirements: 7.4)
+        # Group errors by type
         grouped = defaultdict(list)
         for error in errors:
             error_type = error.get('error_type', 'Unknown')

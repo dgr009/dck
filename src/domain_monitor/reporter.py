@@ -39,8 +39,6 @@ class Reporter:
         Args:
             results: List of DomainResult objects from executor
             console_manager: ConsoleManager instance for Rich output (optional for backward compatibility)
-            
-        Requirements: 16.1, 3.1
         """
         self.results = results
         self.console_manager = console_manager or ConsoleManager()
@@ -54,13 +52,11 @@ class Reporter:
         Creates a formatted tree with domains and their check results.
         Applies color coding based on status with full message visibility.
         Enhanced with better formatting and visual indicators.
-        
-        Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6, 3.1, 3.2, 4.5
         """
         from rich.tree import Tree
         from rich.panel import Panel
         
-        # Sort results by status priority (Requirements: 4.5)
+        # Sort results by status priority
         status_priority = {
             CheckResult.CRITICAL: 0,
             CheckResult.ERROR: 1,
@@ -172,15 +168,13 @@ class Reporter:
             
         Returns:
             List of Text objects for each column
-            
-        Requirements: 16.3, 16.4, 16.5, 16.6, 3.2
         """
         row = []
         
         # Domain name
         row.append(Text(domain_result.domain))
         
-        # Overall status with icon (Requirements: 3.2)
+        # Overall status with icon
         status_icon = self.formatter._get_status_icon(domain_result.overall_status)
         status_color = self._get_status_color(domain_result.overall_status)
         status_text = Text(f"{status_icon} {domain_result.overall_status}", style=status_color)
@@ -205,7 +199,7 @@ class Reporter:
         # RBL Status
         row.append(self._format_check_result(domain_result.results.get('rbl')))
         
-        # Execution time (Requirements: 10.1)
+        # Execution time
         time_text = Text(f"{domain_result.execution_time:.2f}s")
         if domain_result.execution_time > 5.0:
             time_text.stylize("yellow")
@@ -222,17 +216,15 @@ class Reporter:
             
         Returns:
             Text object with appropriate color coding
-            
-        Requirements: 16.3, 16.4, 16.5, 16.6, 6.5
         """
         if check_result is None:
-            # Display "N/A" for checks not enabled (Requirements: 16.6)
+            # Display "N/A" for checks not enabled
             return Text("N/A", style="dim")
         
-        # Apply color coding based on status (Requirements: 16.3, 16.4, 16.5)
+        # Apply color coding based on status
         color = self._get_status_color(check_result.status)
         
-        # Format message with proper truncation (Requirements: 6.5)
+        # Format message with proper truncation
         message = self.formatter.truncate_message(check_result.message, max_length=40)
         
         return Text(message, style=color)
@@ -246,14 +238,12 @@ class Reporter:
             
         Returns:
             Color name for rich library
-            
-        Requirements: 16.3, 16.4, 16.5
         """
         color_map = {
-            CheckResult.OK: "green",        # GREEN for OK (Requirements: 16.3)
-            CheckResult.WARNING: "yellow",  # YELLOW for WARNING (Requirements: 16.4)
-            CheckResult.ERROR: "red",       # RED for ERROR (Requirements: 16.5)
-            CheckResult.CRITICAL: "red",    # RED for CRITICAL (Requirements: 16.5)
+            CheckResult.OK: "green",        # GREEN for OK
+            CheckResult.WARNING: "yellow",  # YELLOW for WARNING
+            CheckResult.ERROR: "red",       # RED for ERROR
+            CheckResult.CRITICAL: "red",    # RED for CRITICAL
         }
         return color_map.get(status, "white")
     
@@ -276,8 +266,6 @@ class Reporter:
         
         Args:
             view_mode: Display mode - 'summary', 'detailed', or 'table'
-            
-        Requirements: 3.1, 3.2, 3.3, 5.1, 5.2, 5.3
         """
         if view_mode == 'summary':
             self.display_summary()
@@ -295,10 +283,8 @@ class Reporter:
         
         Shows aggregate statistics using format_summary_panel and displays
         key metrics for all domain checks.
-        
-        Requirements: 3.1, 5.1, 5.2, 5.3, 5.4, 5.5
         """
-        # Display summary panel (Requirements: 5.1, 5.2, 5.3)
+        # Display summary panel
         summary_panel = self.formatter.format_summary_panel(self.results)
         self.console.print(summary_panel)
         self.console.print()
@@ -310,11 +296,8 @@ class Reporter:
         Shows individual domain panels with check result trees for
         comprehensive information about each domain. Results are grouped
         by status with visual separators between groups.
-        
-        Requirements: 3.1, 3.2, 3.3, 4.5, 5.3
         """
         # Sort results by status priority (CRITICAL/ERROR first, then WARNING, then OK)
-        # Requirements: 4.5, 5.3
         status_priority = {
             CheckResult.CRITICAL: 0,
             CheckResult.ERROR: 1,
@@ -335,7 +318,7 @@ class Reporter:
                 grouped_results[status] = []
             grouped_results[status].append(result)
         
-        # Display each status group with visual separators (Requirements: 4.5)
+        # Display each status group with visual separators
         status_order = [CheckResult.CRITICAL, CheckResult.ERROR, CheckResult.WARNING, CheckResult.OK]
         
         for status in status_order:
@@ -344,7 +327,7 @@ class Reporter:
             
             results_in_group = grouped_results[status]
             
-            # Add visual separator between status groups (Requirements: 4.5)
+            # Add visual separator between status groups
             if status == CheckResult.CRITICAL or status == CheckResult.ERROR:
                 separator_style = "bold red"
                 separator_char = "═"
@@ -363,11 +346,11 @@ class Reporter:
             
             # Display each domain in this status group
             for result in results_in_group:
-                # Display domain panel (Requirements: 3.1, 3.2, 3.3)
+                # Display domain panel
                 domain_panel = self.formatter.format_domain_panel(result, detailed=True)
                 self.console.print(domain_panel)
                 
-                # Display check results as tree (Requirements: 3.4)
+                # Display check results as tree
                 if result.results:
                     check_tree = self.formatter.format_check_tree(result.results)
                     self.console.print(check_tree)
@@ -375,22 +358,22 @@ class Reporter:
                 # Display specialized formatters for specific check types
                 for check_type, check_result in result.results.items():
                     if check_type == 'dns' and check_result.details:
-                        # Display DNS records table (Requirements: 4.1)
+                        # Display DNS records table
                         dns_table = self.formatter.format_dns_table(check_result.details)
                         self.console.print(dns_table)
                     
                     elif check_type == 'rbl' and check_result.details:
-                        # Display RBL results table (Requirements: 4.2)
+                        # Display RBL results table
                         rbl_table = self.formatter.format_rbl_table(check_result.details)
                         self.console.print(rbl_table)
                     
                     elif check_type == 'security' and check_result.details:
-                        # Display security findings tree (Requirements: 4.3)
+                        # Display security findings tree
                         security_tree = self.formatter.format_security_tree(check_result.details)
                         self.console.print(security_tree)
                     
                     elif check_type == 'ssl' and check_result.details:
-                        # Display SSL certificate info table (Requirements: 4.4)
+                        # Display SSL certificate info table
                         ssl_table = self.formatter.format_ssl_info(check_result.details)
                         self.console.print(ssl_table)
                     
@@ -411,8 +394,6 @@ class Reporter:
         
         Shows execution time statistics, highlights slow checks,
         and displays aggregate performance data.
-        
-        Requirements: 10.1, 10.2, 10.3, 10.4, 10.5
         """
         performance_table = self.formatter.format_performance_table(self.results)
         self.console.print(performance_table)
@@ -427,19 +408,17 @@ class Reporter:
         
         Args:
             file_path: Path where JSON file should be created
-            
-        Requirements: 17.1, 17.3, 17.5, 8.1, 8.2, 8.5
         """
         try:
-            # Display export format and destination (Requirements: 8.5)
+            # Display export format and destination
             self.console.print(f"[cyan]Exporting to JSON:[/cyan] {file_path}")
             
-            # Show progress spinner during export (Requirements: 8.4)
+            # Show progress spinner during export
             with self.console.status("[cyan]Exporting results to JSON...", spinner="dots"):
                 # Convert results to JSON-serializable format
                 data = self._results_to_dict()
                 
-                # Write to file (Requirements: 17.1)
+                # Write to file
                 output_path = Path(file_path)
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 
@@ -449,7 +428,7 @@ class Reporter:
                 # Get file size
                 file_size = output_path.stat().st_size
             
-            # Display success message with file path and size (Requirements: 8.1)
+            # Display success message with file path and size
             size_kb = file_size / 1024
             if size_kb < 1024:
                 size_str = f"{size_kb:.2f} KB"
@@ -462,7 +441,7 @@ class Reporter:
             )
             
         except Exception as e:
-            # Handle file creation errors (Requirements: 17.5, 8.3)
+            # Handle file creation errors
             error_msg = f"Failed to export JSON: {str(e)}"
             logger.error(error_msg, exc_info=True)
             self.console_manager.print_error(
@@ -480,16 +459,14 @@ class Reporter:
         
         Args:
             file_path: Path where CSV file should be created
-            
-        Requirements: 17.2, 17.3, 17.5, 8.2, 8.3, 8.4, 8.5
         """
         try:
-            # Display export format and destination (Requirements: 8.5)
+            # Display export format and destination
             self.console.print(f"[cyan]Exporting to CSV:[/cyan] {file_path}")
             
-            # Show progress spinner during export (Requirements: 8.4)
+            # Show progress spinner during export
             with self.console.status("[cyan]Exporting results to CSV...", spinner="dots"):
-                # Flatten data for CSV format (Requirements: 17.2)
+                # Flatten data for CSV format
                 rows = self._results_to_csv_rows()
                 
                 if not rows:
@@ -497,7 +474,7 @@ class Reporter:
                     self.console_manager.print_warning("No results to export")
                     return
                 
-                # Write to file (Requirements: 17.2)
+                # Write to file
                 output_path = Path(file_path)
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 
@@ -508,14 +485,14 @@ class Reporter:
                 
                 row_count = len(rows)
             
-            # Display success message with row count (Requirements: 8.2)
+            # Display success message with row count
             logger.info(f"Results exported to CSV: {file_path}")
             self.console_manager.print_success(
                 f"Results exported to: {file_path} ({row_count} row{'s' if row_count != 1 else ''})"
             )
             
         except Exception as e:
-            # Handle file creation errors (Requirements: 17.5, 8.3)
+            # Handle file creation errors
             error_msg = f"Failed to export CSV: {str(e)}"
             logger.error(error_msg, exc_info=True)
             self.console_manager.print_error(
@@ -530,8 +507,6 @@ class Reporter:
         
         Returns:
             Dictionary containing all results and metadata
-            
-        Requirements: 17.3
         """
         return {
             "timestamp": self.results[0].timestamp.isoformat() if self.results else None,
@@ -562,8 +537,6 @@ class Reporter:
         
         Returns:
             List of dictionaries, one per domain
-            
-        Requirements: 17.3
         """
         rows = []
         

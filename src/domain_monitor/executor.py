@@ -67,8 +67,6 @@ class DomainExecutor:
         Args:
             config: ManifestConfig containing domains and check settings
             console_manager: Optional ConsoleManager for progress display
-            
-        Requirements: 15.1, 2.1
         """
         self.config = config
         self.console_manager = console_manager
@@ -83,8 +81,6 @@ class DomainExecutor:
         
         Returns:
             Dictionary mapping check type names to checker instances
-            
-        Requirements: 15.1
         """
         return {
             'whois': WhoisChecker(timeout=5),
@@ -105,8 +101,6 @@ class DomainExecutor:
         
         Returns:
             List of DomainResult objects, one per domain
-            
-        Requirements: 15.1, 15.2, 2.1, 2.2, 2.3, 2.4, 2.5
         """
         logger.info(f"Starting checks for {len(self.config.domains)} domain(s)")
         start_time = time.time()
@@ -117,7 +111,7 @@ class DomainExecutor:
             checks_to_run = domain.checks if domain.checks else self.config.default_checks
             total_checks += sum(1 for c in checks_to_run if c in self.checkers)
 
-        # Create ProgressTracker if ConsoleManager is available (Requirements: 2.1)
+        # Create ProgressTracker if ConsoleManager is available
         progress_tracker = None
         if self.console_manager:
             from .console.progress import ProgressTracker
@@ -127,7 +121,7 @@ class DomainExecutor:
             )
             progress_tracker.start()
         
-        # Create semaphore to limit concurrent domain checks (Requirements: 15.2)
+        # Create semaphore to limit concurrent domain checks
         semaphore = asyncio.Semaphore(self.MAX_CONCURRENT_DOMAINS)
         
         async def bounded_execute(domain: DomainConfig) -> DomainResult:
@@ -135,11 +129,11 @@ class DomainExecutor:
             async with semaphore:
                 return await self.execute_domain(domain, progress_tracker=progress_tracker)
         
-        # Execute all domain checks in parallel (Requirements: 15.1)
+        # Execute all domain checks in parallel
         tasks = [bounded_execute(domain) for domain in self.config.domains]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        # Filter out exceptions and log them (Requirements: 7.1, 7.2, 7.4)
+        # Filter out exceptions and log them
         domain_results: List[DomainResult] = []
         execution_errors = []
         
@@ -148,7 +142,7 @@ class DomainExecutor:
                 domain_name = self.config.domains[i].name
                 logger.error(f"Failed to execute checks for {domain_name}: {str(result)}", exc_info=True)
                 
-                # Collect error for grouped display (Requirements: 7.4)
+                # Collect error for grouped display
                 execution_errors.append({
                     'message': str(result),
                     'error_type': type(result).__name__,
@@ -169,13 +163,13 @@ class DomainExecutor:
             else:
                 domain_results.append(result)
         
-        # Display grouped errors if any occurred (Requirements: 7.4)
+        # Display grouped errors if any occurred
         if execution_errors and self.console_manager:
             self.console_manager.print_error_group(execution_errors)
         
         total_time = time.time() - start_time
         
-        # Display total execution time (Requirements: 2.5)
+        # Display total execution time
         if progress_tracker:
             progress_tracker.finish(total_time)
         
@@ -200,8 +194,6 @@ class DomainExecutor:
             
         Returns:
             DomainResult with all check results and aggregated status
-            
-        Requirements: 15.3
         """
         logger.debug(f"Starting checks for domain: {domain.name}")
         start_time = time.time()
@@ -209,7 +201,7 @@ class DomainExecutor:
         # Determine which checks to run
         checks_to_run = domain.checks if domain.checks else self.config.default_checks
         
-        # Create tasks for all enabled checks (Requirements: 15.3)
+        # Create tasks for all enabled checks
         tasks = []
         check_types = []
         
@@ -238,10 +230,10 @@ class DomainExecutor:
             tasks.append(task)
             check_types.append(check_type)
         
-        # Execute all checks in parallel (Requirements: 15.3)
+        # Execute all checks in parallel
         check_results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        # Build results dictionary and collect errors (Requirements: 7.1, 7.2)
+        # Build results dictionary and collect errors
         results: Dict[str, CheckResult] = {}
         check_errors = []
         
@@ -251,7 +243,7 @@ class DomainExecutor:
                 error_msg = str(result) if str(result) else f"{type(result).__name__} occurred"
                 logger.error(f"Check {check_type} failed for {domain.name}: {error_msg}", exc_info=True)
                 
-                # Collect error details (Requirements: 7.2)
+                # Collect error details
                 check_errors.append({
                     'message': error_msg,
                     'error_type': type(result).__name__,
@@ -270,14 +262,14 @@ class DomainExecutor:
             else:
                 results[check_type] = result
         
-        # Log check errors for debugging (Requirements: 7.1)
+        # Log check errors for debugging
         if check_errors:
             logger.debug(f"Domain {domain.name} had {len(check_errors)} check error(s)")
         
-        # Calculate overall status (Requirements: 15.4)
+        # Calculate overall status
         overall_status = self._calculate_overall_status(results)
         
-        # Measure execution time (Requirements: 15.4)
+        # Measure execution time
         execution_time = time.time() - start_time
         
         logger.debug(f"Completed checks for {domain.name} in {execution_time:.2f}s")
@@ -304,8 +296,6 @@ class DomainExecutor:
             
         Returns:
             Overall status string
-            
-        Requirements: 15.4
         """
         if not results:
             return CheckResult.OK
@@ -366,8 +356,6 @@ async def safe_check(checker: BaseChecker, domain: str, **kwargs: Any) -> CheckR
         
     Returns:
         CheckResult from the checker, or ERROR CheckResult on failure
-        
-    Requirements: 15.3, 7.1, 7.2
     """
     check_type = checker.__class__.__name__.replace('Checker', '').lower()
     
@@ -380,7 +368,7 @@ async def safe_check(checker: BaseChecker, domain: str, **kwargs: Any) -> CheckR
         return result
         
     except asyncio.TimeoutError:
-        # Check timed out (Requirements: 15.3, 7.2)
+        # Check timed out
         error_msg = f"Check timed out after {checker.timeout}s"
         logger.error(f"{check_type} check timed out for {domain} after {checker.timeout}s")
         return CheckResult(
@@ -395,7 +383,7 @@ async def safe_check(checker: BaseChecker, domain: str, **kwargs: Any) -> CheckR
         )
     
     except ConnectionRefusedError as e:
-        # Connection refused (Requirements: 7.2, 7.5)
+        # Connection refused
         error_msg = f"Connection refused: {str(e)}"
         logger.error(f"{check_type} check failed for {domain}: {error_msg}", exc_info=True)
         return CheckResult(
@@ -410,7 +398,7 @@ async def safe_check(checker: BaseChecker, domain: str, **kwargs: Any) -> CheckR
         )
     
     except TimeoutError as e:
-        # Network timeout (Requirements: 7.2, 7.5)
+        # Network timeout
         error_msg = f"Network timeout: {str(e)}"
         logger.error(f"{check_type} check failed for {domain}: {error_msg}", exc_info=True)
         return CheckResult(
@@ -425,7 +413,7 @@ async def safe_check(checker: BaseChecker, domain: str, **kwargs: Any) -> CheckR
         )
         
     except Exception as e:
-        # Check failed with exception (Requirements: 15.3, 7.1, 7.2)
+        # Check failed with exception
         error_msg = str(e) if str(e) else f"{type(e).__name__} occurred"
         logger.error(
             f"{check_type} check failed for {domain}: {error_msg}",

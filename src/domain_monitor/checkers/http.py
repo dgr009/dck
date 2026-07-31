@@ -37,8 +37,6 @@ class HTTPChecker(BaseChecker):
             
         Returns:
             CheckResult with HTTP status and redirect information
-            
-        Requirements: 5.1, 5.2
         """
         check_start_time = time.time()
         logger.debug(f"Starting HTTP check for domain: {domain}")
@@ -158,8 +156,6 @@ class HTTPChecker(BaseChecker):
         Raises:
             aiohttp.ClientError: If request fails
             asyncio.TimeoutError: If request times out
-            
-        Requirements: 5.1, 5.2, 5.3
         """
         redirect_chain = []
         
@@ -174,7 +170,7 @@ class HTTPChecker(BaseChecker):
                 allow_redirects=True,
                 ssl=False  # Don't verify SSL to avoid certificate issues blocking checks
             ) as response:
-                # Build redirect chain from history (Requirements: 5.3)
+                # Build redirect chain from history
                 if response.history:
                     redirect_chain = [str(resp.url) for resp in response.history]
                     redirect_chain.append(str(response.url))
@@ -195,17 +191,15 @@ class HTTPChecker(BaseChecker):
             
         Returns:
             Status string (OK, WARNING, or ERROR)
-            
-        Requirements: 5.4, 5.5, 5.6
         """
         if status_code == 200:
-            # Success (Requirements: 5.4)
+            # Success
             return CheckResult.OK
         elif 300 <= status_code < 400:
-            # Redirect (Requirements: 5.5)
+            # Redirect
             return CheckResult.WARNING
         elif 400 <= status_code < 600:
-            # Client or server error (Requirements: 5.6)
+            # Client or server error
             return CheckResult.ERROR
         else:
             # Other status codes (1xx, etc.)

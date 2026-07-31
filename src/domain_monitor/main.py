@@ -46,8 +46,6 @@ def setup_logging(log_level: str, debug_mode: bool = False) -> None:
     Args:
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR)
         debug_mode: If True, display all logs to console; if False, only ERROR/CRITICAL
-        
-    Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 20.1, 20.2, 20.3, 20.4, 20.5
     """
     # Convert string level to logging constant
     numeric_level = getattr(logging, log_level.upper(), logging.INFO)
@@ -58,19 +56,19 @@ def setup_logging(log_level: str, debug_mode: bool = False) -> None:
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     
-    # Set up file handler - always logs everything (Requirements: 1.4, 20.1)
+    # Set up file handler - always logs everything
     file_handler = logging.FileHandler('dck.log', encoding='utf-8')
     file_handler.setLevel(numeric_level)
     file_handler.setFormatter(formatter)
     
-    # Set up console handler based on debug mode (Requirements: 1.1, 1.2, 1.3, 1.5)
+    # Set up console handler based on debug mode
     console_handler = logging.StreamHandler()
     if debug_mode:
-        # Debug mode: show all logs to console (Requirements: 1.2)
+        # Debug mode: show all logs to console
         console_handler.setLevel(numeric_level)
         console_handler.setFormatter(formatter)
     else:
-        # Normal mode: suppress all console logs (Requirements: 1.1, 1.3, 1.5)
+        # Normal mode: suppress all console logs
         console_handler.setLevel(logging.CRITICAL + 1)  # Suppress all logs
     
     # Configure root logger
@@ -79,7 +77,7 @@ def setup_logging(log_level: str, debug_mode: bool = False) -> None:
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
     
-    # Log startup message (Requirements: 20.5)
+    # Log startup message
     logger.info(f"Logging initialized at {log_level} level (debug_mode={debug_mode})")
 
 
@@ -98,18 +96,16 @@ def resolve_manifest_file(file_path: Optional[str]) -> str:
         
     Raises:
         click.ClickException: If no manifest file found
-        
-    Requirements: 18.2, 18.3, 18.4
     """
     if file_path:
         # Use provided file path
         return file_path
     
-    # Search for default manifest file (Requirements: 18.2, 18.3)
+    # Search for default manifest file
     default_path = get_default_manifest_path()
     
     if default_path is None:
-        # No manifest file found (Requirements: 18.4)
+        # No manifest file found
         raise click.ClickException(
             "No manifest file found. Please either:\n"
             "  1. Create a 'domains.yaml' or 'domains.json' file in the current directory, or\n"
@@ -131,10 +127,8 @@ def create_adhoc_manifest(domain: str) -> ManifestConfig:
         
     Returns:
         ManifestConfig with single domain
-        
-    Requirements: 19.1, 19.2
     """
-    # Apply all default checks (Requirements: 19.2)
+    # Apply all default checks
     default_checks = list(VALID_CHECK_TYPES)
     
     domain_config = DomainConfig(
@@ -228,17 +222,15 @@ def check_command(
         
         # Enable debug mode with verbose console output
         dck check --debug
-    
-    Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 18.1, 19.1, 17.1, 17.2, 20.2
     """
-    # Configure logging first (Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 20.2, 20.3)
+    # Configure logging first
     setup_logging(log_level, debug_mode=debug)
     
-    # Create ConsoleManager instance (Requirements: 1.1, 1.2, 9.1)
+    # Create ConsoleManager instance
     console_manager = ConsoleManager(debug_mode=debug)
     
     try:
-        # Validate mutual exclusivity of -f and -d flags (Requirements: 19.3)
+        # Validate mutual exclusivity of -f and -d flags
         if file and domain:
             raise click.ClickException(
                 "Cannot use both -f/--file and -d/--domain options together. "
@@ -247,12 +239,12 @@ def check_command(
         
         # Load or create manifest configuration
         if domain:
-            # Ad-hoc domain check mode (Requirements: 19.1)
+            # Ad-hoc domain check mode
             logger.info(f"Running ad-hoc check for domain: {domain}")
             manifest = create_adhoc_manifest(domain)
             manifest_path = f"ad-hoc: {domain}"
         else:
-            # Load manifest from file (Requirements: 18.2, 18.3, 18.4)
+            # Load manifest from file
             manifest_path = resolve_manifest_file(file)
             logger.info(f"Loading manifest from: {manifest_path}")
             manifest = load_manifest(manifest_path)
@@ -262,7 +254,7 @@ def check_command(
         for domain_config in manifest.domains:
             enabled_checks.update(domain_config.checks)
         
-        # Display application banner (Requirements: 9.1, 9.2, 9.3, 9.4, 9.5)
+        # Display application banner
         console_manager.print_banner(
             version="0.1.0",
             manifest_path=manifest_path,
@@ -270,7 +262,7 @@ def check_command(
             check_types=sorted(enabled_checks)
         )
         
-        # Create executor and run checks (Requirements: 15.1, 15.2)
+        # Create executor and run checks
         logger.info(f"Starting checks for {len(manifest.domains)} domain(s)")
         
         executor = DomainExecutor(manifest, console_manager=console_manager)
@@ -278,7 +270,7 @@ def check_command(
         # Run async execution
         results = asyncio.run(executor.execute_all())
         
-        # Create reporter and display results (Requirements: 3.1)
+        # Create reporter and display results
         reporter = Reporter(results, console_manager=console_manager)
         
         # Display results based on view mode
@@ -289,7 +281,7 @@ def check_command(
         else:  # table
             reporter.display_table()
         
-        # Export to file if requested (Requirements: 17.1, 17.2)
+        # Export to file if requested
         if output:
             output_path = Path(output)
             suffix = output_path.suffix.lower()
@@ -311,7 +303,7 @@ def check_command(
         raise
         
     except FileNotFoundError as e:
-        # Handle file not found errors with context (Requirements: 7.1, 7.2, 7.5)
+        # Handle file not found errors with context
         logger.error(f"File not found: {str(e)}", exc_info=True)
         
         try:
@@ -326,11 +318,11 @@ def check_command(
         sys.exit(1)
         
     except Exception as e:
-        # Handle all other errors with user-friendly messages (Requirements: 7.1, 7.2, 7.3)
+        # Handle all other errors with user-friendly messages
         error_msg = str(e) if str(e) else f"{type(e).__name__} occurred"
         logger.error(f"Unexpected error: {error_msg}", exc_info=True)
         
-        # Use ConsoleManager for error display with context (Requirements: 7.1, 7.2, 7.3)
+        # Use ConsoleManager for error display with context
         try:
             console_manager.print_error(
                 error_msg,
@@ -405,8 +397,6 @@ def watch_command(
         
         # Custom log file location
         dck watch --log-file /var/log/monitor.log
-    
-    Requirements: 5.1, 5.2, 6.1
     """
     try:
         # Validate interval parameter (must be > 0)
@@ -592,8 +582,6 @@ def dns_propagation_command(
         
         # Check multiple record types
         dck dns-propagation example.com --record-types A,AAAA,MX
-    
-    Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 9.1, 9.3, 9.4, 10.4
     """
     # Configure logging (use INFO level for DNS propagation)
     setup_logging('INFO', debug_mode=False)
@@ -602,20 +590,20 @@ def dns_propagation_command(
     console_manager = ConsoleManager(debug_mode=False)
     
     try:
-        # Validate domain is not empty (Requirements: 9.1)
+        # Validate domain is not empty
         if not domain or not domain.strip():
             raise click.ClickException("Domain name cannot be empty")
         
         domain = domain.strip()
         
-        # Validate mutual exclusivity of --record-type and --record-types (Requirements: 6.2, 6.5)
+        # Validate mutual exclusivity of --record-type and --record-types
         if record_types and record_type != 'A':
             raise click.ClickException(
                 "Cannot use both --record-type and --record-types options together. "
                 "Please specify only one."
             )
         
-        # Validate interval (Requirements: 7.6)
+        # Validate interval
         if interval <= 0:
             raise click.ClickException(
                 f"Invalid interval: {interval}. Interval must be greater than 0."
@@ -625,7 +613,7 @@ def dns_propagation_command(
         checker = DNSPropagationChecker()
         display = DNSPropagationDisplay(console_manager)
         
-        # Handle multiple record types (Requirements: 6.5, 3.7)
+        # Handle multiple record types
         if record_types:
             types_list = [t.strip() for t in record_types.split(',')]
             
@@ -646,7 +634,7 @@ def dns_propagation_command(
                 f"[dim]Record types: {', '.join(types_list)}[/dim]\n"
             )
             
-            # Query all record types concurrently (Requirements: 3.7)
+            # Query all record types concurrently
             async def check_all_types() -> List[Any]:
                 tasks = [
                     checker.check_propagation(domain, rt, expected)
@@ -670,7 +658,7 @@ def dns_propagation_command(
             logger.info("DNS propagation check completed for all record types")
             
         elif watch:
-            # Watch mode (Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6)
+            # Watch mode
             monitor = DNSPropagationMonitor(
                 checker=checker,
                 display=display,
@@ -683,7 +671,7 @@ def dns_propagation_command(
             )
             
         else:
-            # Single check mode (Requirements: 6.1, 6.2, 6.3)
+            # Single check mode
             console_manager.console.print(
                 f"\n[bold cyan]Checking DNS propagation for {domain}[/bold cyan]"
             )
@@ -706,12 +694,12 @@ def dns_propagation_command(
         raise
     
     except ValueError as e:
-        # Handle validation errors (e.g., invalid record type) (Requirements: 9.3)
+        # Handle validation errors (e.g., invalid record type)
         logger.error(f"Validation error: {str(e)}", exc_info=True)
         raise click.ClickException(str(e))
     
     except Exception as e:
-        # Handle all other errors with user-friendly messages (Requirements: 9.1, 9.4, 9.5)
+        # Handle all other errors with user-friendly messages
         error_msg = str(e) if str(e) else f"{type(e).__name__} occurred"
         logger.error(f"Unexpected error during DNS propagation check: {error_msg}", exc_info=True)
         

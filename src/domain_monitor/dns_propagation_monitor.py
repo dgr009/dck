@@ -45,7 +45,7 @@ class DNSPropagationMonitor:
         Args:
             checker: DNSPropagationChecker instance
             display: DNSPropagationDisplay instance
-            interval: Check interval in seconds (Requirements: 7.5, 7.6)
+            interval: Check interval in seconds
         """
         self.checker = checker
         self.display = display
@@ -59,8 +59,6 @@ class DNSPropagationMonitor:
     
     def _setup_signal_handlers(self) -> None:
         """Register signal handlers for graceful shutdown.
-        
-        Requirements: 7.4
         """
         signal.signal(signal.SIGINT, self._handle_shutdown)
         signal.signal(signal.SIGTERM, self._handle_shutdown)
@@ -73,8 +71,6 @@ class DNSPropagationMonitor:
         Args:
             signum: Signal number
             frame: Current stack frame
-            
-        Requirements: 7.4
         """
         if not self._shutdown_requested:
             self._shutdown_requested = True
@@ -98,8 +94,6 @@ class DNSPropagationMonitor:
             domain: Domain name to monitor
             record_type: DNS record type
             expected_value: Optional expected value for comparison
-            
-        Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6
         """
         if self._running:
             logger.warning("Monitor is already running")
@@ -149,7 +143,7 @@ class DNSPropagationMonitor:
         last_result: Optional[PropagationResult] = None
         iteration = 0
         
-        # Register signal handlers for graceful shutdown (Requirements: 7.4)
+        # Register signal handlers for graceful shutdown
         self._setup_signal_handlers()
         
         while self._running and not self._shutdown_requested:
@@ -166,13 +160,13 @@ class DNSPropagationMonitor:
                 
                 last_result = result
                 
-                # Clear screen for clean update (Requirements: 7.2)
+                # Clear screen for clean update
                 if iteration > 1:
                     # Move cursor up to overwrite previous output
                     # This provides in-place updates without scrolling
                     self.display.console.clear()
                 
-                # Display elapsed time and update info (Requirements: 8.5)
+                # Display elapsed time and update info
                 start_dt = self._start_time or datetime.now()
                 elapsed = datetime.now() - start_dt
                 elapsed_str = str(elapsed).split('.')[0]  # Remove microseconds
@@ -188,7 +182,7 @@ class DNSPropagationMonitor:
                 # Display propagation result
                 self.display.display_result(result, watch_mode=True)
                 
-                # Check if propagation is complete (Requirements: 7.3)
+                # Check if propagation is complete
                 if result.is_complete:
                     logger.info("DNS propagation complete - auto-exiting")
                     self.display.console.print(

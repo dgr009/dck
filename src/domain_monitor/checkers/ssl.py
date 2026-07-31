@@ -42,8 +42,6 @@ class SSLChecker(BaseChecker):
             
         Returns:
             CheckResult with SSL certificate status and details
-            
-        Requirements: 4.1
         """
         check_start_time = time.time()
         logger.debug(f"Starting SSL check for domain: {domain}")
@@ -160,8 +158,6 @@ class SSLChecker(BaseChecker):
             socket.gaierror: If domain cannot be resolved
             socket.timeout: If connection times out
             ssl.SSLError: If SSL handshake fails
-            
-        Requirements: 4.1
         """
         # Run the blocking socket operation in a thread pool
         loop = asyncio.get_event_loop()
@@ -254,12 +250,10 @@ class SSLChecker(BaseChecker):
                 - subject: Certificate subject (domain)
                 - sans: List of Subject Alternative Names
                 - expiration_date: Certificate expiration as datetime
-                
-        Requirements: 4.2, 4.3, 4.4
         """
         cert_info = {}
         
-        # Extract issuer (Requirements: 4.2)
+        # Extract issuer
         # issuer is a tuple of tuples: ((('organizationName', 'Let\'s Encrypt'),),)
         issuer_tuple = cert_dict.get('issuer', ())
         issuer_dict = {}
@@ -269,7 +263,7 @@ class SSLChecker(BaseChecker):
                     issuer_dict[name_tuple[0]] = name_tuple[1]
         cert_info['issuer'] = issuer_dict.get('organizationName', issuer_dict.get('commonName', issuer_dict.get('O', 'Unknown')))
         
-        # Extract subject (Requirements: 4.3)
+        # Extract subject
         # subject is also a tuple of tuples: ((('commonName', 'example.com'),),)
         subject_tuple = cert_dict.get('subject', ())
         subject_dict = {}
@@ -279,13 +273,13 @@ class SSLChecker(BaseChecker):
                     subject_dict[name_tuple[0]] = name_tuple[1]
         cert_info['subject'] = subject_dict.get('commonName', subject_dict.get('CN', 'Unknown'))
         
-        # Extract SANs (Subject Alternative Names) (Requirements: 4.3)
+        # Extract SANs (Subject Alternative Names)
         sans = []
         if 'subjectAltName' in cert_dict:
             sans = [name[1] for name in cert_dict['subjectAltName'] if name[0] == 'DNS']
         cert_info['sans'] = sans
         
-        # Extract expiration date (Requirements: 4.4)
+        # Extract expiration date
         # notAfter format: 'Nov  5 10:30:00 2025 GMT'
         not_after = cert_dict.get('notAfter', '')
         try:
@@ -330,17 +324,15 @@ class SSLChecker(BaseChecker):
             
         Returns:
             Status string (OK, WARNING, or CRITICAL)
-            
-        Requirements: 4.5, 4.6, 4.7
         """
         if days_until_expiry < 0:
-            # Certificate has expired (Requirements: 4.7)
+            # Certificate has expired
             return CheckResult.CRITICAL
         elif days_until_expiry < 7:
-            # Expires within 7 days (Requirements: 4.6)
+            # Expires within 7 days
             return CheckResult.CRITICAL
         elif days_until_expiry < 14:
-            # Expires within 14 days (Requirements: 4.5)
+            # Expires within 14 days
             return CheckResult.WARNING
         else:
             # Valid for 14+ days

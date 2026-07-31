@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class DNSPropagationChecker:
     """DNS propagation checker for verifying DNS record propagation across multiple public DNS servers."""
     
-    # Public DNS servers with their names and locations (Requirements: 1.1, 1.2)
+    # Public DNS servers with their names and locations
     PUBLIC_DNS_SERVERS = [
         ('8.8.8.8', 'Google Primary', 'Global'),
         ('8.8.4.4', 'Google Secondary', 'Global'),
@@ -40,7 +40,7 @@ class DNSPropagationChecker:
         ('156.154.70.1', 'Neustar UltraDNS', 'Global'),
     ]
     
-    # Supported DNS record types (Requirements: 3.1-3.6)
+    # Supported DNS record types
     SUPPORTED_RECORD_TYPES = {'A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT'}
     
     def __init__(self, custom_servers: Optional[List[Tuple[str, str, str]]] = None):
@@ -48,7 +48,6 @@ class DNSPropagationChecker:
         
         Args:
             custom_servers: Optional list of custom DNS servers as (ip, name, location) tuples
-                          (Requirements: 1.3)
         """
         self.dns_servers = []
         
@@ -56,7 +55,7 @@ class DNSPropagationChecker:
         for ip, name, location in self.PUBLIC_DNS_SERVERS:
             self.dns_servers.append(DNSServerInfo(ip=ip, name=name, location=location))
         
-        # Add custom servers if provided (Requirements: 1.3)
+        # Add custom servers if provided
         if custom_servers:
             for ip, name, location in custom_servers:
                 self.dns_servers.append(DNSServerInfo(ip=ip, name=name, location=location))
@@ -76,17 +75,15 @@ class DNSPropagationChecker:
         Args:
             domain: Domain name to check
             record_type: DNS record type (A, AAAA, CNAME, MX, NS, TXT)
-            expected_value: Optional expected value to compare against (Requirements: 4.1)
+            expected_value: Optional expected value to compare against
             
         Returns:
             PropagationResult containing status for each DNS server
             
         Raises:
             ValueError: If record_type is not supported
-            
-        Requirements: 2.1, 2.2, 2.5, 3.1-3.6, 4.1-4.5
         """
-        # Validate record type (Requirements: 9.3)
+        # Validate record type
         record_type = record_type.upper()
         if record_type not in self.SUPPORTED_RECORD_TYPES:
             raise ValueError(
@@ -100,7 +97,7 @@ class DNSPropagationChecker:
         
         start_time = time.time()
         
-        # Query all DNS servers in parallel (Requirements: 2.1)
+        # Query all DNS servers in parallel
         tasks = [
             self._query_dns_server(domain, record_type, server)
             for server in self.dns_servers
@@ -124,7 +121,7 @@ class DNSPropagationChecker:
             else:
                 final_results.append(result)
         
-        # Compare with expected value if provided (Requirements: 4.1, 4.2, 4.3)
+        # Compare with expected value if provided
         if expected_value:
             for result in final_results:
                 if result.status not in ('unreachable', 'timeout'):
@@ -160,16 +157,14 @@ class DNSPropagationChecker:
             
         Returns:
             DNSQueryResult with query status and values
-            
-        Requirements: 1.4, 2.3, 2.5
         """
         start_time = time.time()
         
         try:
-            # Run DNS query in thread pool to avoid blocking (Requirements: 2.4)
+            # Run DNS query in thread pool to avoid blocking
             loop = asyncio.get_event_loop()
             
-            # Set timeout for individual query (Requirements: 2.5)
+            # Set timeout for individual query
             values = await asyncio.wait_for(
                 loop.run_in_executor(
                     None,
@@ -196,7 +191,7 @@ class DNSPropagationChecker:
             )
             
         except asyncio.TimeoutError:
-            # Query timed out (Requirements: 1.4, 2.3, 2.5)
+            # Query timed out
             response_time = time.time() - start_time
             logger.warning(f"DNS query timeout for {domain} on {server.name} ({server.ip})")
             return DNSQueryResult(
@@ -208,7 +203,7 @@ class DNSPropagationChecker:
             )
             
         except Exception as e:
-            # Server unreachable or other error (Requirements: 1.4, 2.3)
+            # Server unreachable or other error
             response_time = time.time() - start_time
             logger.warning(f"DNS query failed for {domain} on {server.name} ({server.ip}): {e}")
             return DNSQueryResult(
@@ -239,8 +234,6 @@ class DNSPropagationChecker:
             
         Raises:
             dns.exception.DNSException: If DNS query fails
-            
-        Requirements: 3.1-3.6, 10.1
         """
         resolver = dns.resolver.Resolver()
         # Use shorter timeout for faster responses
@@ -253,22 +246,22 @@ class DNSPropagationChecker:
         try:
             answers = resolver.resolve(domain, record_type)
             
-            # Format results based on record type (Requirements: 3.1-3.6)
+            # Format results based on record type
             if record_type == 'MX':
-                # MX records include priority (Requirements: 3.4, 4.5)
+                # MX records include priority
                 return [f"{answer.preference} {answer.exchange.to_text().rstrip('.')}" for answer in answers]
             elif record_type == 'TXT':
-                # TXT records may have multiple strings (Requirements: 3.6, 4.5)
+                # TXT records may have multiple strings
                 return [' '.join(str(s, 'utf-8') if isinstance(s, bytes) else str(s) for s in answer.strings) for answer in answers]
             elif record_type in ['NS', 'CNAME']:
-                # NS and CNAME records return domain names (Requirements: 3.3, 3.5, 4.5)
+                # NS and CNAME records return domain names
                 return [answer.to_text().rstrip('.') for answer in answers]
             else:
-                # A, AAAA records return IP addresses (Requirements: 3.1, 3.2)
+                # A, AAAA records return IP addresses
                 return [answer.to_text() for answer in answers]
                 
         except dns.resolver.NXDOMAIN:
-            # Domain does not exist (Requirements: 9.1)
+            # Domain does not exist
             logger.debug(f"Domain {domain} does not exist (NXDOMAIN)")
             return []
         except dns.resolver.NoAnswer:
@@ -284,7 +277,7 @@ class DNSPropagationChecker:
             logger.debug(f"DNS query timeout for {domain}")
             raise
         except Exception as e:
-            # Other DNS errors (Requirements: 9.2, 9.4)
+            # Other DNS errors
             logger.debug(f"DNS query error for {domain}: {e}")
             raise
     
@@ -305,8 +298,6 @@ class DNSPropagationChecker:
             
         Returns:
             True if expected value matches any actual value
-            
-        Requirements: 4.1, 4.2, 4.3, 4.5
         """
         if not actual_values:
             return False

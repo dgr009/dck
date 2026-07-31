@@ -27,7 +27,7 @@ class DNSChecker(BaseChecker):
     and compares local DNS cache with public DNS results.
     """
     
-    # Public DNS servers for propagation checks (Requirements: 7.2)
+    # Public DNS servers for propagation checks
     PUBLIC_DNS_SERVERS = [
         '8.8.8.8',      # Google
         '1.1.1.1',      # Cloudflare
@@ -47,8 +47,6 @@ class DNSChecker(BaseChecker):
             
         Returns:
             CheckResult with DNS information and status
-            
-        Requirements: 7.2
         """
         check_start_time = time.time()
         logger.debug(f"Starting DNS check for domain: {domain}")
@@ -58,7 +56,7 @@ class DNSChecker(BaseChecker):
             warnings = []
             timing_details: Dict[str, Any] = {}
             
-            # Query all DNS record types in parallel (Requirements: 6.1-6.6)
+            # Query all DNS record types in parallel
             logger.debug(f"Querying DNS records for {domain}")
             
             record_start = time.time()
@@ -87,7 +85,7 @@ class DNSChecker(BaseChecker):
             details['ns_records'] = ns_records
             details['txt_records'] = txt_records
             
-            # Check DNS propagation (Requirements: 7.1, 7.3, 7.4, 7.5)
+            # Check DNS propagation
             logger.debug(f"Checking DNS propagation for {domain} across {len(self.PUBLIC_DNS_SERVERS)} servers")
             prop_start = time.time()
             propagation_result = await self._check_propagation(domain)
@@ -99,7 +97,7 @@ class DNSChecker(BaseChecker):
                 logger.debug(f"Propagation details for {domain}: {propagation_result}")
                 warnings.append(f"Propagation Mismatch: {propagation_result['message']}")
             
-            # Check local vs public DNS cache mismatch (Requirements: 8.1, 8.2, 8.3, 8.4)
+            # Check local vs public DNS cache mismatch
             logger.debug(f"Checking DNS cache consistency for {domain}")
             cache_start = time.time()
             cache_result = await self._check_cache_mismatch(domain)
@@ -163,8 +161,6 @@ class DNSChecker(BaseChecker):
             
         Raises:
             dns.exception.DNSException: If DNS query fails
-            
-        Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
         """
         try:
             # Run DNS query in thread pool to avoid blocking
@@ -255,8 +251,6 @@ class DNSChecker(BaseChecker):
                 - consistent: Boolean indicating if all servers agree
                 - message: Description of the propagation status
                 - results: Dict mapping server IPs to their A record results
-                
-        Requirements: 7.1, 7.3, 7.4, 7.5
         """
         # Query all public DNS servers in parallel
         tasks = [
@@ -325,20 +319,18 @@ class DNSChecker(BaseChecker):
                 - message: Description of the cache status
                 - local_results: A records from system resolver
                 - public_results: A records from Google DNS (8.8.8.8)
-                
-        Requirements: 8.1, 8.2, 8.3, 8.4
         """
-        # Query using system default resolver (Requirements: 8.1)
+        # Query using system default resolver
         local_results = await self._query_record(domain, 'A', nameserver=None)
         
-        # Query using Google Public DNS (Requirements: 8.2)
+        # Query using Google Public DNS
         public_results = await self._query_record(domain, 'A', nameserver='8.8.8.8')
         
         # Sort for comparison
         local_set = set(sorted(local_results))
         public_set = set(sorted(public_results))
         
-        # Compare results (Requirements: 8.3)
+        # Compare results
         if local_set == public_set:
             return {
                 'mismatch': False,
@@ -347,7 +339,7 @@ class DNSChecker(BaseChecker):
                 'public_results': public_results
             }
         else:
-            # Results differ - cache mismatch (Requirements: 8.4)
+            # Results differ - cache mismatch
             return {
                 'mismatch': True,
                 'message': f'Local DNS ({", ".join(local_results) or "none"}) differs from public DNS ({", ".join(public_results) or "none"})',

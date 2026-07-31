@@ -38,8 +38,6 @@ class ResultFormatter:
             
         Returns:
             str: Truncated message with ellipsis if needed
-            
-        Requirements: 6.5
         """
         if not message:
             return message
@@ -69,8 +67,6 @@ class ResultFormatter:
             
         Returns:
             Panel: Rich Panel containing formatted summary
-            
-        Requirements: 3.1, 5.1, 5.2, 5.3
         """
         if not results:
             return Panel(
@@ -99,7 +95,7 @@ class ResultFormatter:
         summary_text.append(f"{ICONS['domain']} Total Domains: ", style="info")
         summary_text.append(f"{total}\n\n", style="bold white")
         
-        # Status breakdown with color coding (Requirements: 3.1, 3.2)
+        # Status breakdown with color coding
         summary_text.append("Status Breakdown:\n", style="bold")
         summary_text.append(f"  {ICONS['success']} OK: ", style=STATUS_COLORS['OK'])
         summary_text.append(f"{ok_count}\n", style="white")
@@ -108,12 +104,12 @@ class ResultFormatter:
         summary_text.append(f"  {ICONS['error']} Error/Critical: ", style=STATUS_COLORS['ERROR'])
         summary_text.append(f"{error_count}\n\n", style="white")
         
-        # Execution time metrics (Requirements: 5.4)
+        # Execution time metrics
         summary_text.append(f"{ICONS['time']} Execution Time:\n", style="info")
         summary_text.append(f"  Total: {total_time:.2f}s\n", style="white")
         summary_text.append(f"  Average: {avg_time:.2f}s per domain\n", style="white")
         
-        # Highlight domains requiring attention (Requirements: 5.3)
+        # Highlight domains requiring attention
         critical_domains = [
             r for r in results 
             if r.overall_status in [CheckResult.ERROR, CheckResult.CRITICAL]
@@ -157,8 +153,6 @@ class ResultFormatter:
             
         Returns:
             Panel: Rich Panel containing formatted domain results
-            
-        Requirements: 3.1, 3.2, 3.3
         """
         panel_text = Text()
         
@@ -173,7 +167,7 @@ class ResultFormatter:
         
         panel_text.append("\n", style="white")
         
-        # Overall status (Requirements: 3.2)
+        # Overall status
         status_icon = ResultFormatter._get_status_icon(result.overall_status)
         status_color = STATUS_COLORS.get(result.overall_status, "white")
         panel_text.append("Overall Status: ", style="bold")
@@ -184,7 +178,7 @@ class ResultFormatter:
         panel_text.append(f"{ICONS['time']} Execution Time: ", style="dim")
         panel_text.append(f"{result.execution_time:.2f}s\n", style="white")
         
-        # Timestamp (Requirements: 6.4)
+        # Timestamp
         timestamp_str = ResultFormatter._format_timestamp(result.timestamp)
         panel_text.append("Checked: ", style="dim")
         panel_text.append(f"{timestamp_str}\n\n", style="white")
@@ -200,7 +194,7 @@ class ResultFormatter:
                 panel_text.append(f"  {status_icon} ", style=status_color)
                 panel_text.append(f"{check_type.upper()}: ", style="check_type")
                 
-                # Truncate message if not detailed, show full message in detailed view (Requirements: 6.5)
+                # Truncate message if not detailed, show full message in detailed view
                 message = check_result.message
                 if not detailed:
                     message = ResultFormatter.truncate_message(message, max_length=40)
@@ -231,8 +225,6 @@ class ResultFormatter:
             
         Returns:
             str: Unicode icon character
-            
-        Requirements: 6.3
         """
         icon_map = {
             CheckResult.OK: ICONS['success'],
@@ -254,8 +246,6 @@ class ResultFormatter:
             
         Returns:
             str: Formatted timestamp string
-            
-        Requirements: 6.4
         """
         now = datetime.now()
         
@@ -298,8 +288,6 @@ class ResultFormatter:
             
         Returns:
             Tree: Rich Tree containing formatted check results
-            
-        Requirements: 3.4
         """
         tree = Tree("[bold]Check Results[/bold]")
         
@@ -356,8 +344,6 @@ class ResultFormatter:
             
         Returns:
             Table: Rich Table containing formatted DNS records
-            
-        Requirements: 4.1
         """
         table = Table(title="DNS Records", show_header=True, header_style="bold cyan")
         table.add_column("Type", style="cyan", width=10)
@@ -403,8 +389,6 @@ class ResultFormatter:
             
         Returns:
             Table: Rich Table containing formatted RBL results
-            
-        Requirements: 4.2
         """
         table = Table(title="RBL Check Results", show_header=True, header_style="bold cyan")
         table.add_column("IP Address", style="cyan", width=20)
@@ -458,8 +442,6 @@ class ResultFormatter:
             
         Returns:
             Tree: Rich Tree containing formatted security findings
-            
-        Requirements: 4.3
         """
         tree = Tree("[bold]Security Checks[/bold]")
         
@@ -591,8 +573,6 @@ class ResultFormatter:
             
         Returns:
             Table: Rich Table containing formatted SSL certificate information
-            
-        Requirements: 4.4
         """
         table = Table(title="SSL Certificate Information", show_header=True, header_style="bold cyan")
         table.add_column("Property", style="cyan", width=20)
@@ -739,8 +719,6 @@ class ResultFormatter:
             
         Returns:
             Table: Rich Table containing formatted performance metrics
-            
-        Requirements: 10.1, 10.2, 10.3, 10.4, 10.5
         """
         table = Table(
             title="Performance Metrics",
@@ -755,21 +733,21 @@ class ResultFormatter:
             table.add_row("[dim]No results[/dim]", "", "")
             return table
         
-        # Calculate aggregate statistics (Requirements: 10.3, 10.4)
+        # Calculate aggregate statistics
         execution_times = [r.execution_time for r in results]
         total_time = sum(execution_times)
         avg_time = total_time / len(results)
         min_time = min(execution_times)
         max_time = max(execution_times)
         
-        # Find fastest and slowest domains (Requirements: 10.4)
+        # Find fastest and slowest domains
         fastest_result = min(results, key=lambda r: r.execution_time)
         slowest_result = max(results, key=lambda r: r.execution_time)
         
-        # Identify slow checks (> 5 seconds) (Requirements: 10.2)
+        # Identify slow checks (> 5 seconds)
         slow_checks = [r for r in results if r.execution_time > 5.0]
         
-        # Add rows for each domain (Requirements: 10.1)
+        # Add rows for each domain
         for result in sorted(results, key=lambda r: r.execution_time, reverse=True):
             domain_name = result.domain
             exec_time = result.execution_time
@@ -777,14 +755,14 @@ class ResultFormatter:
             # Format execution time
             time_text = Text(f"{exec_time:.2f}s")
             
-            # Highlight slow checks (Requirements: 10.2)
+            # Highlight slow checks
             if exec_time > 5.0:
                 status_text = Text(f"{ICONS['warning']} SLOW", style="yellow")
                 time_text.stylize("yellow")
             else:
                 status_text = Text(f"{ICONS['success']} OK", style="green")
             
-            # Highlight fastest and slowest (Requirements: 10.4)
+            # Highlight fastest and slowest
             if result.domain == fastest_result.domain:
                 domain_text = Text(f"{domain_name} ", style="cyan")
                 domain_text.append(f"{ICONS['success']} Fastest", style="green")
@@ -799,7 +777,7 @@ class ResultFormatter:
         # Add separator
         table.add_row("", "", "")
         
-        # Add aggregate statistics (Requirements: 10.3)
+        # Add aggregate statistics
         table.add_row(
             Text("Average", style="bold"),
             Text(f"{avg_time:.2f}s", style="bold white"),
@@ -821,7 +799,7 @@ class ResultFormatter:
             ""
         )
         
-        # Add slow checks summary if any (Requirements: 10.2)
+        # Add slow checks summary if any
         if slow_checks:
             table.add_row("", "", "")
             table.add_row(
