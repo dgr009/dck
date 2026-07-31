@@ -471,12 +471,10 @@ class TestExpectedValueComparison:
         # Verify no expected value was set
         assert result.expected_value is None
         
-        # Verify that successful results don't have matched/mismatched status
+        # Verify that successful results matching consensus have 'matched' status
         for query_result in result.query_results:
-            if query_result.status not in ('timeout', 'unreachable'):
-                # Status should be 'success' or 'no_records', not 'matched' or 'mismatched'
-                assert query_result.status not in ('matched', 'mismatched'), \
-                    f"Expected no comparison status without expected value, got {query_result.status}"
+            if query_result.status not in ('timeout', 'unreachable') and query_result.values:
+                assert query_result.status == 'matched'
     
     # Feature: dns-propagation-checker, Property 9: Expected Value Comparison
     @pytest.mark.asyncio
