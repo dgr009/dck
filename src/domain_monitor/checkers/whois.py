@@ -8,8 +8,8 @@ and determines the urgency level based on days until expiration.
 import asyncio
 import logging
 import time
-from datetime import datetime
-from typing import Optional, Any
+from datetime import datetime, timezone
+from typing import Any
 
 import whois
 
@@ -20,14 +20,12 @@ logger = logging.getLogger(__name__)
 
 class WhoisChecker(BaseChecker):
     """
-    Checker for WHOIS domain registration information.
+    Checker for domain registration and expiration monitoring.
     
-    Queries WHOIS data to retrieve:
-    - Domain registrar
-    - Domain status
-    - Expiration date
+    Queries WHOIS data to extract expiration dates, registrar info, and status,
+    and determines the urgency level based on days until expiration.
     
-    Determines status based on days until expiration:
+    Status levels:
     - RED (CRITICAL): < 30 days
     - YELLOW (WARNING): < 60 days
     - GREEN (OK): >= 60 days
@@ -119,23 +117,23 @@ class WhoisChecker(BaseChecker):
             
         except (AttributeError, KeyError) as e:
             # Handle WHOIS parsing errors
-            logger.error(f"WHOIS query failed for {domain}: {str(e)}", exc_info=True)
+            logger.warning(f"WHOIS query failed for {domain}: {e!s}")
             return self._create_result(
                 domain=domain,
                 status=CheckResult.ERROR,
-                message=f"WHOIS query failed: {str(e)}",
+                message=f"WHOIS query failed: {e!s}",
                 details={"error_type": "whois_error"}
             )
         except Exception as e:
-            logger.error(f"WHOIS check failed for {domain}: {str(e)}", exc_info=True)
+            logger.warning(f"WHOIS check failed for {domain}: {e!s}")
             return self._create_result(
                 domain=domain,
                 status=CheckResult.ERROR,
-                message=f"WHOIS check failed: {str(e)}",
+                message=f"WHOIS check failed: {e!s}",
                 details={"error_type": type(e).__name__}
             )
     
-    def _extract_registrar(self, whois_data: Any) -> Optional[str]:
+    def _extract_registrar(self, whois_data: Any) -> str | None:
         """
         Extract registrar information from WHOIS data.
         
@@ -152,7 +150,7 @@ class WhoisChecker(BaseChecker):
             return str(registrar) if registrar is not None else None
         return None
     
-    def _extract_status(self, whois_data: Any) -> Optional[str]:
+    def _extract_status(self, whois_data: Any) -> str | None:
         """
         Extract domain status from WHOIS data.
         
@@ -169,7 +167,7 @@ class WhoisChecker(BaseChecker):
             return str(status) if status is not None else None
         return None
     
-    def _extract_country(self, whois_data: Any) -> Optional[str]:
+    def _extract_country(self, whois_data: Any) -> str | None:
         """
         Extract country information from WHOIS data.
         
@@ -186,7 +184,7 @@ class WhoisChecker(BaseChecker):
             return str(country) if country is not None else None
         return None
     
-    def _extract_expiration_date(self, whois_data: Any) -> Optional[datetime]:
+    def _extract_expiration_date(self, whois_data: Any) -> datetime | None:
         """
         Extract expiration date from WHOIS data.
         
@@ -197,14 +195,11 @@ class WhoisChecker(BaseChecker):
             Expiration date as datetime object or None if not available
         """
         if hasattr(whois_data, 'expiration_date'):
-            expiration = whois_data.expiration_date
-            if isinstance(expiration, list):
-                # Some domains return multiple dates, use the first one
-                expiration = expiration[0] if expiration else None
-            
-            if isinstance(expiration, datetime):
-                return expiration
-        
+            exp_date = whois_data.expiration_date
+            if isinstance(exp_date, list):
+                return exp_date[0] if exp_date else None
+            if isinstance(exp_date, datetime):
+                return exp_date
         return None
     
     def _calculate_days_until_expiry(self, expiry_date: datetime) -> int:
@@ -217,11 +212,11 @@ class WhoisChecker(BaseChecker):
         Returns:
             Number of days until expiration (negative if already expired)
         """
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         
-        # Make expiry_date timezone-naive if it has timezone info
-        if expiry_date.tzinfo is not None:
-            expiry_date = expiry_date.replace(tzinfo=None)
+        # Make expiry_date timezone-aware (UTC)
+        if expiry_date.tzinfo is None:
+            expiry_date = expiry_date.replace(tzinfo=timezone.utc)
         
         delta = expiry_date - now
         return delta.days

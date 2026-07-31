@@ -7,7 +7,7 @@ Checks HTTP/HTTPS accessibility, status codes, and redirect chains.
 import asyncio
 import logging
 import time
-from typing import Any, List, Tuple
+from typing import Any
 
 import aiohttp
 
@@ -96,13 +96,13 @@ class HTTPChecker(BaseChecker):
                     )
                     
                 except aiohttp.ClientSSLError as e:
-                    logger.debug(f"SSL error on {protocol.upper()} for {domain}: {str(e)}")
+                    logger.debug(f"SSL error on {protocol.upper()} for {domain}: {e!s}")
                     # SSL error on HTTPS, try HTTP
                     if protocol == 'https':
                         continue
                     raise
                 except aiohttp.ClientConnectorError as e:
-                    logger.debug(f"Connection error on {protocol.upper()} for {domain}: {str(e)}")
+                    logger.debug(f"Connection error on {protocol.upper()} for {domain}: {e!s}")
                     # Connection error, try next protocol
                     if protocol == 'https':
                         continue
@@ -124,21 +124,21 @@ class HTTPChecker(BaseChecker):
                 message=f"Request timed out after {self.timeout}s"
             )
         except aiohttp.ClientError as e:
-            logger.error(f"HTTP request failed for {domain}: {str(e)}", exc_info=True)
+            logger.exception(f"HTTP request failed for {domain}: {e!s}")
             return self._create_result(
                 domain=domain,
                 status=CheckResult.ERROR,
-                message=f"HTTP request failed: {str(e)}"
+                message=f"HTTP request failed: {e!s}"
             )
         except Exception as e:
-            logger.error(f"HTTP check failed for {domain}: {str(e)}", exc_info=True)
+            logger.exception(f"HTTP check failed for {domain}: {e!s}")
             return self._create_result(
                 domain=domain,
                 status=CheckResult.ERROR,
-                message=f"HTTP check failed: {str(e)}"
+                message=f"HTTP check failed: {e!s}"
             )
     
-    async def _make_request(self, url: str) -> Tuple[int, List[str], Any]:
+    async def _make_request(self, url: str) -> tuple[int, list[str], Any]:
         """
         Send HTTP GET request and track redirect chain.
         

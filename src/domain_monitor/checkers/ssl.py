@@ -10,11 +10,11 @@ import socket
 import ssl
 import time
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Any
 
-from OpenSSL import crypto
 from cryptography import x509 as crypto_x509
 from cryptography.x509.oid import ExtensionOID
+from OpenSSL import crypto
 
 from .base_checker import BaseChecker, CheckResult
 
@@ -114,13 +114,13 @@ class SSLChecker(BaseChecker):
             )
             
         except socket.gaierror as e:
-            logger.error(f"Failed to resolve domain {domain}: {str(e)}")
+            logger.error(f"Failed to resolve domain {domain}: {e!s}")
             return self._create_result(
                 domain=domain,
                 status=CheckResult.ERROR,
                 message="Failed to resolve domain name"
             )
-        except socket.timeout:
+        except TimeoutError:
             logger.warning(f"SSL connection to {domain} timed out after {self.timeout}s")
             return self._create_result(
                 domain=domain,
@@ -128,21 +128,21 @@ class SSLChecker(BaseChecker):
                 message=f"Connection timed out after {self.timeout}s"
             )
         except ssl.SSLError as e:
-            logger.error(f"SSL error for {domain}: {str(e)}", exc_info=True)
+            logger.exception(f"SSL error for {domain}: {e!s}")
             return self._create_result(
                 domain=domain,
                 status=CheckResult.ERROR,
-                message=f"SSL error: {str(e)}"
+                message=f"SSL error: {e!s}"
             )
         except Exception as e:
-            logger.error(f"SSL check failed for {domain}: {str(e)}", exc_info=True)
+            logger.exception(f"SSL check failed for {domain}: {e!s}")
             return self._create_result(
                 domain=domain,
                 status=CheckResult.ERROR,
-                message=f"SSL check failed: {str(e)}"
+                message=f"SSL check failed: {e!s}"
             )
     
-    async def _get_certificate(self, domain: str, port: int = 443) -> Dict[str, Any]:
+    async def _get_certificate(self, domain: str, port: int = 443) -> dict[str, Any]:
         """
         Establish SSL connection and retrieve certificate.
         
@@ -173,7 +173,7 @@ class SSLChecker(BaseChecker):
         )
         return cert_dict
     
-    def _get_certificate_sync(self, domain: str, port: int) -> Dict[str, Any]:
+    def _get_certificate_sync(self, domain: str, port: int) -> dict[str, Any]:
         """
         Synchronous helper to get certificate (runs in thread pool).
         
@@ -237,7 +237,7 @@ class SSLChecker(BaseChecker):
         
         return {}
     
-    def _parse_certificate(self, cert_dict: Dict[str, Any]) -> Dict[str, Any]:
+    def _parse_certificate(self, cert_dict: dict[str, Any]) -> dict[str, Any]:
         """
         Parse certificate details from certificate dictionary.
         

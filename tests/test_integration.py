@@ -114,7 +114,7 @@ class TestEndToEndExecution:
         executor = DomainExecutor(manifest)
         
         # Mock the checker execution
-        async def mock_execute_domain(domain_config):
+        async def mock_execute_domain(domain_config, **kwargs):
             return DomainResult(
                 domain=domain_config.name,
                 tags=domain_config.tags,
